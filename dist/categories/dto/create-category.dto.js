@@ -9,16 +9,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CategoryDTO = exports.CreateCategoryDto = void 0;
+exports.CreateCategoryDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateCategoryDto {
 }
 exports.CreateCategoryDto = CreateCategoryDto;
-class CategoryDTO {
-}
-exports.CategoryDTO = CategoryDTO;
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], CategoryDTO.prototype, "name", void 0);
+], CreateCategoryDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "imageUrl", void 0);
 //# sourceMappingURL=create-category.dto.js.map

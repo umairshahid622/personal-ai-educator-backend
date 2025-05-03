@@ -21,10 +21,11 @@ let CategoriesService = class CategoriesService {
     constructor(categoryRepo) {
         this.categoryRepo = categoryRepo;
     }
-    async createCategory(name) {
+    async createCategory(dto) {
         try {
             let paylaod = this.categoryRepo.create({
-                name: name.name,
+                name: dto.name,
+                imageUrl: dto.imageUrl,
             });
             return await this.categoryRepo.save(paylaod);
         }

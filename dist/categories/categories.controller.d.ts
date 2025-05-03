@@ -4,7 +4,7 @@ import { UpdateCategoryDto } from "./dto/update-category.dto";
 export declare class CategoriesController {
     private readonly categoriesService;
     constructor(categoriesService: CategoriesService);
-    create(createCategoryDto: CreateCategoryDto): string;
+    create(createCategoryDto: CreateCategoryDto): Promise<import("./entities/category.entity").Categories | undefined>;
     find3Categories(): Promise<import("./entities/category.entity").Categories[]>;
     findAll(): string;
     findOne(id: string): string;

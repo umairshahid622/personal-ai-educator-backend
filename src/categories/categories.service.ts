@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { CategoryDTO, CreateCategoryDto } from "./dto/create-category.dto";
+import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { Not, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -12,10 +12,11 @@ export class CategoriesService {
     private readonly categoryRepo: Repository<Categories>
   ) {}
 
-  async createCategory(name: CategoryDTO) {
+  async createCategory(dto: CreateCategoryDto) {
     try {
       let paylaod = this.categoryRepo.create({
-        name: name.name,
+        name: dto.name,
+        imageUrl: dto.imageUrl,
       });
 
       return await this.categoryRepo.save(paylaod);

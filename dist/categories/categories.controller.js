@@ -22,7 +22,7 @@ let CategoriesController = class CategoriesController {
         this.categoriesService = categoriesService;
     }
     create(createCategoryDto) {
-        return this.categoriesService.create(createCategoryDto);
+        return this.categoriesService.createCategory(createCategoryDto);
     }
     find3Categories() {
         return this.categoriesService.findAllCategories();

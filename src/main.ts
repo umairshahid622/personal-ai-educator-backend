@@ -1,7 +1,6 @@
 import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { Logger } from "@nestjs/common";
 import { DataSource } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 import { join } from "path";

@@ -17,7 +17,7 @@ export class CategoriesController {
 
   @Post()
   create(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoriesService.create(createCategoryDto);
+    return this.categoriesService.createCategory(createCategoryDto);
   }
 
   @Get('get3Categories')
