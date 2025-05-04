@@ -24,13 +24,15 @@ const progress_module_1 = require("./progress/progress.module");
 const quizes_module_1 = require("./quizes/quizes.module");
 const institutes_module_1 = require("./institutes/institutes.module");
 const certificates_module_1 = require("./certificates/certificates.module");
+const subcategory_module_1 = require("./subcategory/subcategory.module");
+const subcategory_entity_1 = require("./subcategory/entities/subcategory.entity");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([course_entity_1.Courses, skills_entity_1.Skills, category_entity_1.Categories, users_entity_1.User]),
+            typeorm_1.TypeOrmModule.forFeature([course_entity_1.Courses, skills_entity_1.Skills, category_entity_1.Categories, users_entity_1.User, subcategory_entity_1.SubCategory]),
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ".env",
@@ -47,6 +49,7 @@ exports.AppModule = AppModule = __decorate([
                     password: config.get("DATABASE_PASSWORD"),
                     database: config.get("DATABASE_NAME"),
                     autoLoadEntities: true,
+                    entities: [subcategory_entity_1.SubCategory],
                     synchronize: true,
                 }),
             }),
@@ -57,6 +60,7 @@ exports.AppModule = AppModule = __decorate([
             quizes_module_1.QuizesModule,
             institutes_module_1.InstitutesModule,
             certificates_module_1.CertificatesModule,
+            subcategory_module_1.SubcategoryModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

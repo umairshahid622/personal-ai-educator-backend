@@ -12,14 +12,17 @@ import { CourseModule } from "./course/course.module";
 import { Courses } from "./course/entities/course.entity";
 import { CategoriesModule } from "./categories/categories.module";
 import { Categories } from "./categories/entities/category.entity";
-import { ProgressModule } from './progress/progress.module';
-import { QuizesModule } from './quizes/quizes.module';
-import { InstitutesModule } from './institutes/institutes.module';
-import { CertificatesModule } from './certificates/certificates.module';
+import { ProgressModule } from "./progress/progress.module";
+import { QuizesModule } from "./quizes/quizes.module";
+import { InstitutesModule } from "./institutes/institutes.module";
+import { CertificatesModule } from "./certificates/certificates.module";
+import { SubcategoryModule } from "./subcategory/subcategory.module";
+import { SubCategory } from "./subcategory/entities/subcategory.entity";
+import { CourseSeeder } from "./utilities/courses.seed";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Courses, Skills, Categories, User]),
+    TypeOrmModule.forFeature([Courses, Skills, Categories, User, SubCategory]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",
@@ -36,6 +39,7 @@ import { CertificatesModule } from './certificates/certificates.module';
         password: config.get<string>("DATABASE_PASSWORD"),
         database: config.get<string>("DATABASE_NAME"),
         autoLoadEntities: true,
+        entities: [SubCategory],
         synchronize: true,
       }),
     }),
@@ -53,6 +57,8 @@ import { CertificatesModule } from './certificates/certificates.module';
     InstitutesModule,
 
     CertificatesModule,
+
+    SubcategoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

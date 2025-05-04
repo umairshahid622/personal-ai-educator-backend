@@ -9,34 +9,36 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Categories = void 0;
-const course_entity_1 = require("../../course/entities/course.entity");
-const subcategory_entity_1 = require("../../subcategory/entities/subcategory.entity");
+exports.SubCategory = void 0;
 const typeorm_1 = require("typeorm");
-let Categories = class Categories {
+const category_entity_1 = require("../../categories/entities/category.entity");
+const course_entity_1 = require("../../course/entities/course.entity");
+let SubCategory = class SubCategory {
 };
-exports.Categories = Categories;
+exports.SubCategory = SubCategory;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
     __metadata("design:type", String)
-], Categories.prototype, "uuid", void 0);
+], SubCategory.prototype, "id", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
-], Categories.prototype, "name", void 0);
+], SubCategory.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
-    __metadata("design:type", String)
-], Categories.prototype, "imageUrl", void 0);
+    (0, typeorm_1.ManyToOne)(() => category_entity_1.Categories, (category) => category.subCategories, {
+        onDelete: "CASCADE",
+    }),
+    __metadata("design:type", category_entity_1.Categories)
+], SubCategory.prototype, "category", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => course_entity_1.Courses, (course) => course.category),
+    (0, typeorm_1.OneToMany)(() => course_entity_1.Courses, (course) => course.subCategory),
     __metadata("design:type", Array)
-], Categories.prototype, "courses", void 0);
+], SubCategory.prototype, "courses", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => subcategory_entity_1.SubCategory, (sc) => sc.category),
-    __metadata("design:type", Array)
-], Categories.prototype, "subCategories", void 0);
-exports.Categories = Categories = __decorate([
-    (0, typeorm_1.Entity)({ name: "categories" })
-], Categories);
-//# sourceMappingURL=category.entity.js.map
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], SubCategory.prototype, "isPassed", void 0);
+exports.SubCategory = SubCategory = __decorate([
+    (0, typeorm_1.Entity)()
+], SubCategory);
+//# sourceMappingURL=subcategory.entity.js.map
