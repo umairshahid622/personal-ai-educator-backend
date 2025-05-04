@@ -13,6 +13,7 @@ exports.SubCategory = void 0;
 const typeorm_1 = require("typeorm");
 const category_entity_1 = require("../../categories/entities/category.entity");
 const course_entity_1 = require("../../course/entities/course.entity");
+const quiz_entity_1 = require("../../quiz/entities/quiz.entity");
 let SubCategory = class SubCategory {
 };
 exports.SubCategory = SubCategory;
@@ -30,6 +31,10 @@ __decorate([
     }),
     __metadata("design:type", category_entity_1.Categories)
 ], SubCategory.prototype, "category", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => quiz_entity_1.Quiz, (quiz) => quiz.subCategory),
+    __metadata("design:type", Array)
+], SubCategory.prototype, "quizzes", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => course_entity_1.Courses, (course) => course.subCategory),
     __metadata("design:type", Array)

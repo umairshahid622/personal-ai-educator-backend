@@ -8,6 +8,7 @@ import {
 } from "typeorm";
 import { Categories } from "../../categories/entities/category.entity";
 import { Courses } from "../../course/entities/course.entity";
+import { Quiz } from "src/quiz/entities/quiz.entity";
 
 @Entity()
 export class SubCategory {
@@ -22,9 +23,11 @@ export class SubCategory {
   })
   category: Categories;
 
+  @OneToMany(() => Quiz, (quiz) => quiz.subCategory)
+  quizzes: Quiz[];
+
   @OneToMany(() => Courses, (course) => course.subCategory)
   courses: Courses[];
-
 
   @Column({ default: false })
   isPassed: boolean;

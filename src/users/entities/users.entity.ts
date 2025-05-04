@@ -1,8 +1,10 @@
 import { IsEmail, IsNotEmpty, MinLength, IsDateString } from "class-validator";
+import { Quiz } from "src/quiz/entities/quiz.entity";
 import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
@@ -30,6 +32,9 @@ export class User {
   @IsDateString()
   @IsNotEmpty()
   dateOfBirth: Date;
+
+  @OneToMany(() => Quiz, (quiz) => quiz.user)
+  quizzes: Quiz[];
 
   @CreateDateColumn()
   createdAt: Date;

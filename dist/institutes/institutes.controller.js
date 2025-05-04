@@ -16,7 +16,6 @@ exports.InstitutesController = void 0;
 const common_1 = require("@nestjs/common");
 const institutes_service_1 = require("./institutes.service");
 const create_institute_dto_1 = require("./dto/create-institute.dto");
-const update_institute_dto_1 = require("./dto/update-institute.dto");
 const swagger_1 = require("@nestjs/swagger");
 let InstitutesController = class InstitutesController {
     constructor(institutesService) {
@@ -25,20 +24,11 @@ let InstitutesController = class InstitutesController {
     async create(createInstituteDto) {
         return this.institutesService.create(createInstituteDto);
     }
-    async findByCourse(courseName) {
+    async bulkCreate(list) {
+        return this.institutesService.bulkCreate(list);
+    }
+    async findByCourseName(courseName) {
         return this.institutesService.findByCourseName(courseName);
-    }
-    findAll() {
-        return this.institutesService.findAll();
-    }
-    findOne(id) {
-        return this.institutesService.findOne(+id);
-    }
-    update(id, updateInstituteDto) {
-        return this.institutesService.update(+id, updateInstituteDto);
-    }
-    remove(id) {
-        return this.institutesService.remove(+id);
     }
 };
 exports.InstitutesController = InstitutesController;
@@ -50,40 +40,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], InstitutesController.prototype, "create", null);
 __decorate([
+    (0, common_1.Post)("bulk"),
+    (0, swagger_1.ApiBody)({ type: [create_institute_dto_1.CreateInstituteDto] }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Array]),
+    __metadata("design:returntype", Promise)
+], InstitutesController.prototype, "bulkCreate", null);
+__decorate([
     (0, common_1.Get)("search"),
     __param(0, (0, common_1.Query)("courseName")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], InstitutesController.prototype, "findByCourse", null);
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], InstitutesController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], InstitutesController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_institute_dto_1.UpdateInstituteDto]),
-    __metadata("design:returntype", void 0)
-], InstitutesController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], InstitutesController.prototype, "remove", null);
+], InstitutesController.prototype, "findByCourseName", null);
 exports.InstitutesController = InstitutesController = __decorate([
     (0, swagger_1.ApiTags)("institutes"),
     (0, common_1.Controller)("institutes"),

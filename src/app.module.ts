@@ -13,16 +13,25 @@ import { Courses } from "./course/entities/course.entity";
 import { CategoriesModule } from "./categories/categories.module";
 import { Categories } from "./categories/entities/category.entity";
 import { ProgressModule } from "./progress/progress.module";
-import { QuizesModule } from "./quizes/quizes.module";
 import { InstitutesModule } from "./institutes/institutes.module";
 import { CertificatesModule } from "./certificates/certificates.module";
 import { SubcategoryModule } from "./subcategory/subcategory.module";
 import { SubCategory } from "./subcategory/entities/subcategory.entity";
 import { CourseSeeder } from "./utilities/courses.seed";
+import { EbookModule } from "./ebook/ebook.module";
+import { Ebook } from "./ebook/entities/ebook.entity";
+import { QuizModule } from './quiz/quiz.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Courses, Skills, Categories, User, SubCategory]),
+    TypeOrmModule.forFeature([
+      Courses,
+      Skills,
+      Categories,
+      User,
+      SubCategory,
+      Ebook,
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",
@@ -39,7 +48,7 @@ import { CourseSeeder } from "./utilities/courses.seed";
         password: config.get<string>("DATABASE_PASSWORD"),
         database: config.get<string>("DATABASE_NAME"),
         autoLoadEntities: true,
-        entities: [SubCategory],
+        entities: [SubCategory, Ebook],
         synchronize: true,
       }),
     }),
@@ -52,13 +61,15 @@ import { CourseSeeder } from "./utilities/courses.seed";
 
     ProgressModule,
 
-    QuizesModule,
-
     InstitutesModule,
 
     CertificatesModule,
 
     SubcategoryModule,
+
+    EbookModule,
+
+    QuizModule,
   ],
   controllers: [AppController],
   providers: [AppService],

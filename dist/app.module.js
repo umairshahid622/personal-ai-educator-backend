@@ -21,18 +21,27 @@ const course_entity_1 = require("./course/entities/course.entity");
 const categories_module_1 = require("./categories/categories.module");
 const category_entity_1 = require("./categories/entities/category.entity");
 const progress_module_1 = require("./progress/progress.module");
-const quizes_module_1 = require("./quizes/quizes.module");
 const institutes_module_1 = require("./institutes/institutes.module");
 const certificates_module_1 = require("./certificates/certificates.module");
 const subcategory_module_1 = require("./subcategory/subcategory.module");
 const subcategory_entity_1 = require("./subcategory/entities/subcategory.entity");
+const ebook_module_1 = require("./ebook/ebook.module");
+const ebook_entity_1 = require("./ebook/entities/ebook.entity");
+const quiz_module_1 = require("./quiz/quiz.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([course_entity_1.Courses, skills_entity_1.Skills, category_entity_1.Categories, users_entity_1.User, subcategory_entity_1.SubCategory]),
+            typeorm_1.TypeOrmModule.forFeature([
+                course_entity_1.Courses,
+                skills_entity_1.Skills,
+                category_entity_1.Categories,
+                users_entity_1.User,
+                subcategory_entity_1.SubCategory,
+                ebook_entity_1.Ebook,
+            ]),
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ".env",
@@ -49,7 +58,7 @@ exports.AppModule = AppModule = __decorate([
                     password: config.get("DATABASE_PASSWORD"),
                     database: config.get("DATABASE_NAME"),
                     autoLoadEntities: true,
-                    entities: [subcategory_entity_1.SubCategory],
+                    entities: [subcategory_entity_1.SubCategory, ebook_entity_1.Ebook],
                     synchronize: true,
                 }),
             }),
@@ -57,10 +66,11 @@ exports.AppModule = AppModule = __decorate([
             course_module_1.CourseModule,
             categories_module_1.CategoriesModule,
             progress_module_1.ProgressModule,
-            quizes_module_1.QuizesModule,
             institutes_module_1.InstitutesModule,
             certificates_module_1.CertificatesModule,
             subcategory_module_1.SubcategoryModule,
+            ebook_module_1.EbookModule,
+            quiz_module_1.QuizModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

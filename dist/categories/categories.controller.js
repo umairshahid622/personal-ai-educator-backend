@@ -16,7 +16,6 @@ exports.CategoriesController = void 0;
 const common_1 = require("@nestjs/common");
 const categories_service_1 = require("./categories.service");
 const create_category_dto_1 = require("./dto/create-category.dto");
-const update_category_dto_1 = require("./dto/update-category.dto");
 let CategoriesController = class CategoriesController {
     constructor(categoriesService) {
         this.categoriesService = categoriesService;
@@ -26,18 +25,6 @@ let CategoriesController = class CategoriesController {
     }
     find3Categories() {
         return this.categoriesService.findAllCategories();
-    }
-    findAll() {
-        return this.categoriesService.findAll();
-    }
-    findOne(id) {
-        return this.categoriesService.findOne(+id);
-    }
-    update(id, updateCategoryDto) {
-        return this.categoriesService.update(+id, updateCategoryDto);
-    }
-    remove(id) {
-        return this.categoriesService.remove(+id);
     }
 };
 exports.CategoriesController = CategoriesController;
@@ -54,34 +41,6 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], CategoriesController.prototype, "find3Categories", null);
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], CategoriesController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], CategoriesController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_category_dto_1.UpdateCategoryDto]),
-    __metadata("design:returntype", void 0)
-], CategoriesController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(":id"),
-    __param(0, (0, common_1.Param)("id")),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], CategoriesController.prototype, "remove", null);
 exports.CategoriesController = CategoriesController = __decorate([
     (0, common_1.Controller)("categories"),
     __metadata("design:paramtypes", [categories_service_1.CategoriesService])

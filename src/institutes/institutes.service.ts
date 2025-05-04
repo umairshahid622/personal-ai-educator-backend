@@ -17,26 +17,14 @@ export class InstitutesService {
     return await this.instituteRepository.save(institute);
   }
 
+  async bulkCreate(list: CreateInstituteDto[]): Promise<Institute[]> {
+    return this.instituteRepository.save(list);
+  }
+
   async findByCourseName(courseName: string): Promise<Institute[]> {
     return this.instituteRepository
       .createQueryBuilder("institute")
       .where(":courseName = ANY(institute.courses)", { courseName })
       .getMany();
-  }
-
-  findAll() {
-    return this.instituteRepository.find()
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} institute`;
-  }
-
-  update(id: number, updateInstituteDto: UpdateInstituteDto) {
-    return `This action updates a #${id} institute`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} institute`;
   }
 }

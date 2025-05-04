@@ -28,7 +28,7 @@ let CourseService = class CourseService {
             .skip(skip)
             .take(limit);
         if (categoryId) {
-            query.where("course.category_id = :categoryId", { categoryId });
+            query.where("course.categoryUuid = :categoryId", { categoryId });
         }
         const [data, total] = await query.getManyAndCount();
         return {

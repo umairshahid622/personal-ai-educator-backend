@@ -25,23 +25,14 @@ let InstitutesService = class InstitutesService {
         const institute = this.instituteRepository.create(createInstituteDto);
         return await this.instituteRepository.save(institute);
     }
+    async bulkCreate(list) {
+        return this.instituteRepository.save(list);
+    }
     async findByCourseName(courseName) {
         return this.instituteRepository
             .createQueryBuilder("institute")
             .where(":courseName = ANY(institute.courses)", { courseName })
             .getMany();
-    }
-    findAll() {
-        return this.instituteRepository.find();
-    }
-    findOne(id) {
-        return `This action returns a #${id} institute`;
-    }
-    update(id, updateInstituteDto) {
-        return `This action updates a #${id} institute`;
-    }
-    remove(id) {
-        return `This action removes a #${id} institute`;
     }
 };
 exports.InstitutesService = InstitutesService;

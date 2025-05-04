@@ -53,21 +53,21 @@ export class AuthenticationController {
     return this.authenticationService.forgotPassword(email, newPassword);
   }
 
-  @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.authenticationService.findOne(+id);
-  }
+  // @Get(":id")
+  // findOne(@Param("id") id: string) {
+  //   return this.authenticationService.findOne(+id);
+  // }
 
-  @Patch(":id")
-  update(
-    @Param("id") id: string,
-    @Body() updateAuthenticationDto: UpdateAuthenticationDto
-  ) {
-    return this.authenticationService.update(+id, updateAuthenticationDto);
-  }
+  // @Patch(":id")
+  // update(
+  //   @Param("id") id: string,
+  //   @Body() updateAuthenticationDto: UpdateAuthenticationDto
+  // ) {
+  //   return this.authenticationService.update(+id, updateAuthenticationDto);
+  // }
 
-  @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.authenticationService.remove(+id);
-  }
+  // @Delete(":id")
+  // remove(@Param("id") id: string) {
+  //   return this.authenticationService.remove(+id);
+  // }
 }
