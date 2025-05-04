@@ -15,66 +15,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SubcategoryController = void 0;
 const common_1 = require("@nestjs/common");
 const subcategory_service_1 = require("./subcategory.service");
-const create_subcategory_dto_1 = require("./dto/create-subcategory.dto");
-const update_subcategory_dto_1 = require("./dto/update-subcategory.dto");
 let SubcategoryController = class SubcategoryController {
     constructor(subcategoryService) {
         this.subcategoryService = subcategoryService;
     }
-    create(createSubcategoryDto) {
-        return this.subcategoryService.create(createSubcategoryDto);
-    }
-    findAll() {
-        return this.subcategoryService.findAll();
-    }
-    findOne(id) {
-        return this.subcategoryService.findOne(+id);
-    }
-    update(id, updateSubcategoryDto) {
-        return this.subcategoryService.update(+id, updateSubcategoryDto);
-    }
-    remove(id) {
-        return this.subcategoryService.remove(+id);
+    findByCategory(id) {
+        return this.subcategoryService.findByCategory(id);
     }
 };
 exports.SubcategoryController = SubcategoryController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_subcategory_dto_1.CreateSubcategoryDto]),
-    __metadata("design:returntype", void 0)
-], SubcategoryController.prototype, "create", null);
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], SubcategoryController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
+    (0, common_1.Get)("byCategoryId/:id"),
+    __param(0, (0, common_1.Param)("id")),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], SubcategoryController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_subcategory_dto_1.UpdateSubcategoryDto]),
-    __metadata("design:returntype", void 0)
-], SubcategoryController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], SubcategoryController.prototype, "remove", null);
+], SubcategoryController.prototype, "findByCategory", null);
 exports.SubcategoryController = SubcategoryController = __decorate([
-    (0, common_1.Controller)('subcategory'),
+    (0, common_1.Controller)("subcategory"),
     __metadata("design:paramtypes", [subcategory_service_1.SubcategoryService])
 ], SubcategoryController);
 //# sourceMappingURL=subcategory.controller.js.map
