@@ -1,7 +1,6 @@
 import { DataSource, Repository } from "typeorm";
 import { JwtService } from "@nestjs/jwt";
 import { CreateAuthenticationDto, LoginAuthenticationDto } from "src/users/dto/create-users.dto";
-import { UpdateAuthenticationDto } from "src/users/dto/update-users.dto";
 import { User } from "src/users/entities/users.entity";
 export declare class AuthenticationService {
     private readonly userRepository;
@@ -19,9 +18,4 @@ export declare class AuthenticationService {
     forgotPassword(email: string, newPassword: string): Promise<{
         message: string;
     }>;
-    private generateRandomPassword;
-    findAll(): string;
-    findOne(id: number): string;
-    update(id: number, updateAuthenticationDto: UpdateAuthenticationDto): string;
-    remove(id: number): string;
 }

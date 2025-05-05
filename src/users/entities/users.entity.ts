@@ -44,6 +44,9 @@ export class User {
   @OneToMany(() => Degree, (deg) => deg.user)
   degrees: Degree[];
 
+  @Column({ default: false })
+  emailVerified: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -61,4 +61,5 @@ export class QuizController {
     const userId = req["user"]["userId"];
     return this.quizService.getUserBundles(userId);
   }
+  
 }

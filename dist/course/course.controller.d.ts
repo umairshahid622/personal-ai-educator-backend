@@ -1,5 +1,5 @@
 import { CourseService } from "./course.service";
-import { CreateCourseDto, PaginationDto } from "./dto/create-course.dto";
+import { PaginationDto } from "./dto/create-course.dto";
 export declare class CourseController {
     private readonly courseService;
     constructor(courseService: CourseService);
@@ -9,5 +9,10 @@ export declare class CourseController {
         page: number;
         lastPage: number;
     }>;
-    create(createCourseDto: CreateCourseDto): string;
+    search(page: number | undefined, limit: number | undefined, categoryUuid: string, search?: string): Promise<{
+        data: import("./entities/course.entity").Courses[];
+        page: number;
+        lastPage: number;
+        total: number;
+    }>;
 }

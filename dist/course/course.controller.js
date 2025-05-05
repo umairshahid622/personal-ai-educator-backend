@@ -23,8 +23,13 @@ let CourseController = class CourseController {
     async findCourses(paginationDto) {
         return this.courseService.paginate(paginationDto);
     }
-    create(createCourseDto) {
-        return this.courseService.create(createCourseDto);
+    search(page = 1, limit = 10, categoryUuid, search) {
+        return this.courseService.findPaginated({
+            page,
+            limit,
+            categoryUuid,
+            search,
+        });
     }
 };
 exports.CourseController = CourseController;
@@ -36,12 +41,15 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], CourseController.prototype, "findCourses", null);
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Get)("search"),
+    __param(0, (0, common_1.Query)("page", common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Query)("limit", common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Query)("categoryUuid")),
+    __param(3, (0, common_1.Query)("search")),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_course_dto_1.CreateCourseDto]),
+    __metadata("design:paramtypes", [Object, Object, String, String]),
     __metadata("design:returntype", void 0)
-], CourseController.prototype, "create", null);
+], CourseController.prototype, "search", null);
 exports.CourseController = CourseController = __decorate([
     (0, common_1.Controller)("course"),
     __metadata("design:paramtypes", [course_service_1.CourseService])

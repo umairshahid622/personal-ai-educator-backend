@@ -1,16 +1,8 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  Query,
-} from "@nestjs/common";
+import { Controller, Get, ParseIntPipe, Query } from "@nestjs/common";
 import { CourseService } from "./course.service";
-import { CreateCourseDto, PaginationDto } from "./dto/create-course.dto";
-import { UpdateCourseDto } from "./dto/update-course.dto";
+import { PaginationDto } from "./dto/create-course.dto";
+
+import { FindCoursesDto } from "./dto/find-course.dto";
 
 @Controller("course")
 export class CourseController {
@@ -21,28 +13,18 @@ export class CourseController {
     return this.courseService.paginate(paginationDto);
   }
 
-  @Post()
-  create(@Body() createCourseDto: CreateCourseDto) {
-    return this.courseService.create(createCourseDto);
+  @Get("search")
+  search(
+    @Query("page", ParseIntPipe) page = 1,
+    @Query("limit", ParseIntPipe) limit = 10,
+    @Query("categoryUuid") categoryUuid: string,
+    @Query("search") search?: string,
+  ) {
+    return this.courseService.findPaginated({
+      page,
+      limit,
+      categoryUuid,
+      search,
+    });
   }
-
-  // @Get()
-  // findAll() {
-  //   return this.courseService.findAll();
-  // }
-
-  // @Get(":id")
-  // findOne(@Param("id") id: string) {
-  //   return this.courseService.findOne(+id);
-  // }
-
-  // @Patch(":id")
-  // update(@Param("id") id: string, @Body() updateCourseDto: UpdateCourseDto) {
-  //   return this.courseService.update(+id, updateCourseDto);
-  // }
-
-  // @Delete(":id")
-  // remove(@Param("id") id: string) {
-  //   return this.courseService.remove(+id);
-  // }
 }

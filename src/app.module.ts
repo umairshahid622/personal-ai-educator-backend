@@ -5,14 +5,12 @@ import { AuthenticationModule } from "./authentication/authentication.module";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { UsersModule } from "./users/users.module";
-import { Skills } from "./entities/skills.entity";
 
 import { User } from "./users/entities/users.entity";
 import { CourseModule } from "./course/course.module";
 import { Courses } from "./course/entities/course.entity";
 import { CategoriesModule } from "./categories/categories.module";
 import { Categories } from "./categories/entities/category.entity";
-import { ProgressModule } from "./progress/progress.module";
 import { InstitutesModule } from "./institutes/institutes.module";
 import { SubcategoryModule } from "./subcategory/subcategory.module";
 import { SubCategory } from "./subcategory/entities/subcategory.entity";
@@ -27,7 +25,6 @@ import { DegreeModule } from './degree/degree.module';
   imports: [
     TypeOrmModule.forFeature([
       Courses,
-      Skills,
       Categories,
       User,
       SubCategory,
@@ -59,8 +56,6 @@ import { DegreeModule } from './degree/degree.module';
     CourseModule,
 
     CategoriesModule,
-
-    ProgressModule,
 
     InstitutesModule,
 

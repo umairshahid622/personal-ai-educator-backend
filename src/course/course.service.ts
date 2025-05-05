@@ -4,6 +4,7 @@ import { UpdateCourseDto } from "./dto/update-course.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Courses } from "./entities/course.entity";
 import { Repository } from "typeorm";
+import { FindCoursesDto } from "./dto/find-course.dto";
 
 @Injectable()
 export class CourseService {
@@ -33,23 +34,35 @@ export class CourseService {
     };
   }
 
-  create(createCourseDto: CreateCourseDto) {
-    return "This action adds a new course";
-  }
+  async findPaginated(dto: FindCoursesDto) {
+    const { page = 1, limit = 10, categoryUuid, search } = dto;
+    const skip = (page - 1) * limit;
 
-  findAll() {
-    return "this action will return All Coureses";
-  }
+    const qb = this.courseRepo
+      .createQueryBuilder("c")
+      .where("c.categoryUuid = :categoryUuid", { categoryUuid });
 
-  findOne(id: number) {
-    return `This action returns a #${id} course`;
-  }
+    if (search) {
+      qb.andWhere(
+        `(c.title       ILIKE :q
+         OR c.programType ILIKE :q
+         OR c.duration    ILIKE :q
+         OR c.skills      ILIKE :q)`,
+        { q: `%${search}%` }
+      );
+    }
 
-  update(id: number, updateCourseDto: UpdateCourseDto) {
-    return `This action updates a #${id} course`;
-  }
+    const [data, total] = await qb
+      .take(limit)
+      .skip(skip)
+      .orderBy("c.title", "ASC")
+      .getManyAndCount();
 
-  remove(id: number) {
-    return `This action removes a #${id} course`;
+    return {
+      data,
+      page,
+      lastPage: Math.ceil(total / limit),
+      total,
+    };
   }
 }

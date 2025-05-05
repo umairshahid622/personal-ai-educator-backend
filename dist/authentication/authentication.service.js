@@ -104,22 +104,6 @@ let AuthenticationService = class AuthenticationService {
         await this.userRepository.save(user);
         return { message: "Password updated successfully" };
     }
-    generateRandomPassword(length = 10) {
-        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    }
-    findAll() {
-        return `This action returns all authentication`;
-    }
-    findOne(id) {
-        return `This action returns a #${id} authentication`;
-    }
-    update(id, updateAuthenticationDto) {
-        return `This action updates a #${id} authentication`;
-    }
-    remove(id) {
-        return `This action removes a #${id} authentication`;
-    }
 };
 exports.AuthenticationService = AuthenticationService;
 exports.AuthenticationService = AuthenticationService = __decorate([

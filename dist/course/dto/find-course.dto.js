@@ -9,25 +9,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Skills = void 0;
-const course_entity_1 = require("../course/entities/course.entity");
-const typeorm_1 = require("typeorm");
-let Skills = class Skills {
-};
-exports.Skills = Skills;
+exports.FindCoursesDto = void 0;
+const class_validator_1 = require("class-validator");
+class FindCoursesDto {
+}
+exports.FindCoursesDto = FindCoursesDto;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], FindCoursesDto.prototype, "page", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], FindCoursesDto.prototype, "limit", void 0);
+__decorate([
+    (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)
-], Skills.prototype, "uuid", void 0);
+], FindCoursesDto.prototype, "categoryUuid", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ unique: true }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], Skills.prototype, "name", void 0);
-__decorate([
-    (0, typeorm_1.ManyToMany)(() => course_entity_1.Courses, (course) => course.skills),
-    __metadata("design:type", Array)
-], Skills.prototype, "courses", void 0);
-exports.Skills = Skills = __decorate([
-    (0, typeorm_1.Entity)({ name: "skills" })
-], Skills);
-//# sourceMappingURL=skills.entity.js.map
+], FindCoursesDto.prototype, "search", void 0);
+//# sourceMappingURL=find-course.dto.js.map

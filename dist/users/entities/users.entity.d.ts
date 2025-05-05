@@ -10,6 +10,7 @@ export declare class User {
     quizzes: Quiz[];
     certificates: Certificate[];
     degrees: Degree[];
+    emailVerified: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

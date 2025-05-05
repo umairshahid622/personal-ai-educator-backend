@@ -14,13 +14,11 @@ const authentication_module_1 = require("./authentication/authentication.module"
 const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
 const users_module_1 = require("./users/users.module");
-const skills_entity_1 = require("./entities/skills.entity");
 const users_entity_1 = require("./users/entities/users.entity");
 const course_module_1 = require("./course/course.module");
 const course_entity_1 = require("./course/entities/course.entity");
 const categories_module_1 = require("./categories/categories.module");
 const category_entity_1 = require("./categories/entities/category.entity");
-const progress_module_1 = require("./progress/progress.module");
 const institutes_module_1 = require("./institutes/institutes.module");
 const subcategory_module_1 = require("./subcategory/subcategory.module");
 const subcategory_entity_1 = require("./subcategory/entities/subcategory.entity");
@@ -37,7 +35,6 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([
                 course_entity_1.Courses,
-                skills_entity_1.Skills,
                 category_entity_1.Categories,
                 users_entity_1.User,
                 subcategory_entity_1.SubCategory,
@@ -66,7 +63,6 @@ exports.AppModule = AppModule = __decorate([
             users_module_1.UsersModule,
             course_module_1.CourseModule,
             categories_module_1.CategoriesModule,
-            progress_module_1.ProgressModule,
             institutes_module_1.InstitutesModule,
             subcategory_module_1.SubcategoryModule,
             ebook_module_1.EbookModule,

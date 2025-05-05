@@ -38,20 +38,29 @@ let CourseService = class CourseService {
             lastPage: Math.ceil(total / limit),
         };
     }
-    create(createCourseDto) {
-        return "This action adds a new course";
-    }
-    findAll() {
-        return "this action will return All Coureses";
-    }
-    findOne(id) {
-        return `This action returns a #${id} course`;
-    }
-    update(id, updateCourseDto) {
-        return `This action updates a #${id} course`;
-    }
-    remove(id) {
-        return `This action removes a #${id} course`;
+    async findPaginated(dto) {
+        const { page = 1, limit = 10, categoryUuid, search } = dto;
+        const skip = (page - 1) * limit;
+        const qb = this.courseRepo
+            .createQueryBuilder("c")
+            .where("c.categoryUuid = :categoryUuid", { categoryUuid });
+        if (search) {
+            qb.andWhere(`(c.title       ILIKE :q
+         OR c.programType ILIKE :q
+         OR c.duration    ILIKE :q
+         OR c.skills      ILIKE :q)`, { q: `%${search}%` });
+        }
+        const [data, total] = await qb
+            .take(limit)
+            .skip(skip)
+            .orderBy("c.title", "ASC")
+            .getManyAndCount();
+        return {
+            data,
+            page,
+            lastPage: Math.ceil(total / limit),
+            total,
+        };
     }
 };
 exports.CourseService = CourseService;
