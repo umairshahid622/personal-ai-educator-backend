@@ -54,4 +54,11 @@ export class QuizController {
     const userId = req["user"]["userId"];
     return this.quizService.updateStatusByTitle(userId, dto);
   }
+
+
+  @Get('getUserBundle')
+  async getUserBundles(@Req() req: Request) {
+    const userId = req["user"]["userId"];
+    return this.quizService.getUserBundles(userId);
+  }
 }

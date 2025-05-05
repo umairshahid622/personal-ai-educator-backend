@@ -119,7 +119,6 @@ No explanation—just JSON.`;
     }
     if (current.question) questions.push(current as Mcq);
     console.log(questions);
-    
 
     return questions;
   }
@@ -156,6 +155,14 @@ No explanation—just JSON.`;
       status: passed ? "passed" : "fail",
       title,
     };
+  }
+
+  async getUserBundles(userId: string): Promise<Quiz[]> {
+    const bundles = await this.quizRepo.find({
+      where: { userId },
+      order: { createdAt: "DESC" },
+    });
+    return bundles;
   }
 
   private parseJsonArray(raw: string) {

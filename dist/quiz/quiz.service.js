@@ -134,6 +134,13 @@ No explanation—just JSON.`;
             title,
         };
     }
+    async getUserBundles(userId) {
+        const bundles = await this.quizRepo.find({
+            where: { userId },
+            order: { createdAt: "DESC" },
+        });
+        return bundles;
+    }
     parseJsonArray(raw) {
         const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
         const jsonText = fence ? fence[1] : raw;

@@ -36,6 +36,10 @@ let QuizController = class QuizController {
         const userId = req["user"]["userId"];
         return this.quizService.updateStatusByTitle(userId, dto);
     }
+    async getUserBundles(req) {
+        const userId = req["user"]["userId"];
+        return this.quizService.getUserBundles(userId);
+    }
 };
 exports.QuizController = QuizController;
 __decorate([
@@ -64,6 +68,13 @@ __decorate([
         update_quiz_dto_1.UpdateQuizItemDto]),
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "updateItemStatus", null);
+__decorate([
+    (0, common_1.Get)('getUserBundle'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Request]),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "getUserBundles", null);
 exports.QuizController = QuizController = __decorate([
     (0, common_1.Controller)("quizzes"),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),

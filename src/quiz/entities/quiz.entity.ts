@@ -13,7 +13,6 @@ import {
 } from "typeorm";
 
 @Entity("quizzes")
-// @Unique(["userId", "subCategoryId"])
 export class Quiz {
   @PrimaryGeneratedColumn("uuid")
   id: string;

@@ -2,9 +2,9 @@ import { Courses } from "src/course/entities/course.entity";
 import { SubCategory } from "src/subcategory/entities/subcategory.entity";
 import { Entity, Column, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity({ name: "categories" }) // Ensure it matches the existing DB table name
+@Entity({ name: "categories" })
 export class Categories {
-  @PrimaryGeneratedColumn("uuid") // The category ID is a UUID and already exists
+  @PrimaryGeneratedColumn("uuid") 
   uuid: string;
 
   @Column()
