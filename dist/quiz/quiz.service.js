@@ -106,6 +106,7 @@ No explanation—just JSON.`;
         }
         if (current.question)
             questions.push(current);
+        console.log(questions);
         return questions;
     }
     async updateStatusByTitle(userId, dto) {

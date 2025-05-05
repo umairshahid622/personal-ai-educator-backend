@@ -1,48 +1,46 @@
 // src/common/openrouter.client.ts
-import axios from "axios";
-
-export interface AiChoice {
-  message: { role: string; content: string };
-}
-
-export interface AiResponse {
-  choices: AiChoice[];
-}
+import axios, { AxiosInstance } from "axios";
 
 export class OpenRouterClient {
-  private readonly apiKey = process.env.OPENROUTER_API_KEY!;
-  private readonly baseUrl = "https://openrouter.ai/api/v1/chat/completions";
+  private client: AxiosInstance;
+  private key: string;
 
-  async getCompletion(prompt: string): Promise<AiResponse> {
-    if (!this.apiKey) {
-      throw new Error("Missing OPENROUTER_API_KEY in env");
-    }
-    try {
-      const resp = await axios.post<AiResponse>(
-        this.baseUrl,
-        {
-          model: "deepseek/deepseek-r1:free",
-          messages: [{ role: "user", content: prompt }],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            "Content-Type": "application/json",
-          },
-        }
+  constructor() {
+    this.key = process.env.OPENROUTER_API_KEY || "";
+    if (!this.key) {
+      throw new Error(
+        "Missing OPENROUTER_API_KEY environment variable. " +
+          "Please set it to your valid OpenRouter API key."
       );
+    }
 
-      if (resp.status !== 200) {
+    this.client = axios.create({
+      baseURL: "https://openrouter.ai/api/v1",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.key}`,
+      },
+      timeout: 30_000,
+    });
+  }
+
+  async getCompletion(prompt: string) {
+    try {
+      const resp = await this.client.post("/chat/completions", {
+        model: "deepseek/deepseek-r1:free",
+        messages: [{ role: "user", content: prompt }],
+        stream: false,
+      });
+      return resp.data;
+    } catch (err: any) {
+      // AxiosError
+      if (err.response?.status === 401) {
         throw new Error(
-          `AI error: ${resp.status} ${JSON.stringify(resp.data)}`
+          "OpenRouter authentication failed (401). " +
+            "Check your OPENROUTER_API_KEY."
         );
       }
-
-      const result = resp.data
-      return result;
-    } catch (error) {
-      console.log(error);
-      throw new Error(error);
+      throw new Error(`OpenRouter request failed: ${err.message}`);
     }
   }
 }

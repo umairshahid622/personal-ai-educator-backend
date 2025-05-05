@@ -4,32 +4,35 @@ exports.OpenRouterClient = void 0;
 const axios_1 = require("axios");
 class OpenRouterClient {
     constructor() {
-        this.apiKey = process.env.OPENROUTER_API_KEY;
-        this.baseUrl = "https://openrouter.ai/api/v1/chat/completions";
+        this.key = process.env.OPENROUTER_API_KEY || "";
+        if (!this.key) {
+            throw new Error("Missing OPENROUTER_API_KEY environment variable. " +
+                "Please set it to your valid OpenRouter API key.");
+        }
+        this.client = axios_1.default.create({
+            baseURL: "https://openrouter.ai/api/v1",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${this.key}`,
+            },
+            timeout: 30_000,
+        });
     }
     async getCompletion(prompt) {
-        if (!this.apiKey) {
-            throw new Error("Missing OPENROUTER_API_KEY in env");
-        }
         try {
-            const resp = await axios_1.default.post(this.baseUrl, {
+            const resp = await this.client.post("/chat/completions", {
                 model: "deepseek/deepseek-r1:free",
                 messages: [{ role: "user", content: prompt }],
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.apiKey}`,
-                    "Content-Type": "application/json",
-                },
+                stream: false,
             });
-            if (resp.status !== 200) {
-                throw new Error(`AI error: ${resp.status} ${JSON.stringify(resp.data)}`);
-            }
-            const result = resp.data;
-            return result;
+            return resp.data;
         }
-        catch (error) {
-            console.log(error);
-            throw new Error(error);
+        catch (err) {
+            if (err.response?.status === 401) {
+                throw new Error("OpenRouter authentication failed (401). " +
+                    "Check your OPENROUTER_API_KEY.");
+            }
+            throw new Error(`OpenRouter request failed: ${err.message}`);
         }
     }
 }

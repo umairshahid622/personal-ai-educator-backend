@@ -118,6 +118,8 @@ No explanation—just JSON.`;
       }
     }
     if (current.question) questions.push(current as Mcq);
+    console.log(questions);
+    
 
     return questions;
   }
@@ -145,7 +147,6 @@ No explanation—just JSON.`;
       }
     }
 
-    // recompute overall isPassed: all items must be passed
     quiz.isPassed = quiz.items.every((it) => it.status === "passed");
 
     await this.quizRepo.save(quiz);
