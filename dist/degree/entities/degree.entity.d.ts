@@ -8,4 +8,5 @@ export declare class Degree {
     categoryId: string;
     pdfPath: string;
     issuedAt: Date;
+    originalName: string;
 }

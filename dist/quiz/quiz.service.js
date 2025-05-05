@@ -36,6 +36,13 @@ let QuizService = class QuizService {
         this.catRepo = catRepo;
         this.ai = new openrouter_client_1.OpenRouterClient();
     }
+    async getUserBundles(userId) {
+        const bundles = await this.quizRepo.find({
+            where: { userId },
+            order: { createdAt: "DESC" },
+        });
+        return bundles;
+    }
     async getOrCreateForUser(userId, subCategoryId) {
         let quiz = await this.quizRepo.findOne({
             where: { userId, subCategoryId },
@@ -126,10 +133,10 @@ No explanation—just JSON.`;
             where: { userId, subCategoryId },
         });
         if (!quiz)
-            throw new common_1.NotFoundException();
+            throw new common_1.NotFoundException("Quiz bundle not found");
         const idx = quiz.items.findIndex((i) => i.title === title);
         if (idx < 0)
-            throw new common_1.NotFoundException();
+            throw new common_1.NotFoundException("Quiz title not found");
         const passed = marks >= 7;
         quiz.items[idx].status = passed ? "passed" : "fail";
         if (passed &&
@@ -140,31 +147,43 @@ No explanation—just JSON.`;
         quiz.isPassed = quiz.items.every((it) => it.status === "passed");
         await this.quizRepo.save(quiz);
         if (passed && quiz.isPassed) {
-            const exists = await this.certRepo.findOne({
-                where: { userId, subCategoryId },
-            });
-            if (!exists) {
-                const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
-                await this.certRepo.save({ userId, subCategoryId, pdfPath });
-            }
             const subCat = await this.subCatRepo.findOne({
                 where: { id: subCategoryId },
                 relations: ["category", "category.subCategories"],
             });
+            if (!subCat)
+                throw new common_1.NotFoundException("SubCategory not found");
+            const certExists = await this.certRepo.findOne({
+                where: { userId, subCategoryId },
+            });
+            if (!certExists) {
+                const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+                await this.certRepo.save({
+                    userId,
+                    subCategoryId,
+                    pdfPath,
+                    originalName: subCat.name,
+                });
+            }
             const allPassed = await Promise.all(subCat.category.subCategories.map(async (sc) => {
-                const qb = await this.quizRepo.findOne({
+                const b = await this.quizRepo.findOne({
                     where: { userId, subCategoryId: sc.id },
                 });
-                return qb?.isPassed === true;
+                return b?.isPassed === true;
             })).then((arr) => arr.every((x) => x));
             if (allPassed) {
                 const categoryId = subCat.category.uuid;
-                const existsDeg = await this.degreeRepo.findOne({
+                const degExists = await this.degreeRepo.findOne({
                     where: { userId, categoryId },
                 });
-                if (!existsDeg) {
+                if (!degExists) {
                     const pdfPath = await this.buildDegreePdf(userId, categoryId);
-                    await this.degreeRepo.save({ userId, categoryId, pdfPath });
+                    await this.degreeRepo.save({
+                        userId,
+                        categoryId,
+                        pdfPath,
+                        originalName: subCat.category.name,
+                    });
                 }
             }
         }
@@ -173,18 +192,6 @@ No explanation—just JSON.`;
             status: passed ? "passed" : "fail",
             title,
         };
-    }
-    async getUserBundles(userId) {
-        const bundles = await this.quizRepo.find({
-            where: { userId },
-            order: { createdAt: "DESC" },
-        });
-        return bundles;
-    }
-    parseJsonArray(raw) {
-        const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
-        const jsonText = fence ? fence[1] : raw;
-        return JSON.parse(jsonText.trim());
     }
     async buildSubCategoryPdf(userId, subCategoryId) {
         const user = await this.userRepo.findOne({ where: { uuid: userId } });
@@ -211,7 +218,7 @@ No explanation—just JSON.`;
             .fontSize(16)
             .text(`This certifies that user ${user.displayName}`, { align: "center" })
             .moveDown()
-            .text(`has successfully completed all quizzes in sub‐category:`, {
+            .text(`has successfully completed all quizzes in Subject:`, {
             align: "center",
         })
             .moveDown()
@@ -254,7 +261,7 @@ No explanation—just JSON.`;
             .fontSize(16)
             .text(`This certifies that user ${user.displayName}`, { align: "center" })
             .moveDown()
-            .text(`has successfully passed ALL sub‐categories in:`, {
+            .text(`has successfully passed ALL subjects in:`, {
             align: "center",
         })
             .moveDown()
@@ -271,6 +278,11 @@ No explanation—just JSON.`;
             writeStream.on("error", (err) => rej(err));
         });
         return `/assets/degrees/${filename}`;
+    }
+    parseJsonArray(raw) {
+        const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
+        const jsonText = fence ? fence[1] : raw;
+        return JSON.parse(jsonText.trim());
     }
 };
 exports.QuizService = QuizService;

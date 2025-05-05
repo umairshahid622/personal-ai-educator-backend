@@ -20,12 +20,12 @@ export declare class QuizService {
     private readonly catRepo;
     private ai;
     constructor(quizRepo: Repository<Quiz>, subCatRepo: Repository<SubCategory>, certRepo: Repository<Certificate>, degreeRepo: Repository<Degree>, userRepo: Repository<User>, catRepo: Repository<Categories>);
+    getUserBundles(userId: string): Promise<Quiz[]>;
     getOrCreateForUser(userId: string, subCategoryId: string): Promise<Quiz>;
     generateExamByTitle(userId: string, subCategoryId: string, title: string): Promise<Mcq[]>;
     private parseMcq;
     updateStatusByTitle(userId: string, dto: UpdateQuizItemDto): Promise<any>;
-    getUserBundles(userId: string): Promise<Quiz[]>;
-    private parseJsonArray;
     private buildSubCategoryPdf;
     private buildDegreePdf;
+    private parseJsonArray;
 }

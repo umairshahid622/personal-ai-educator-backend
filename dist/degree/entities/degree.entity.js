@@ -46,6 +46,10 @@ __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: "issued_at" }),
     __metadata("design:type", Date)
 ], Degree.prototype, "issuedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: "original_name", type: "varchar", length: 255 }),
+    __metadata("design:type", String)
+], Degree.prototype, "originalName", void 0);
 exports.Degree = Degree = __decorate([
     (0, typeorm_1.Entity)("degrees"),
     (0, typeorm_1.Unique)(["userId", "categoryId"])

@@ -27,4 +27,7 @@ export class Degree {
 
   @Column("text", { name: "pdf_path" }) pdfPath: string;
   @CreateDateColumn({ name: "issued_at" }) issuedAt: Date;
+
+  @Column({ name: "original_name", type: "varchar", length: 255 })
+  originalName: string;
 }

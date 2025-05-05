@@ -46,6 +46,10 @@ __decorate([
     (0, typeorm_1.CreateDateColumn)({ name: "issued_at" }),
     __metadata("design:type", Date)
 ], Certificate.prototype, "issuedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: "original_name", type: "varchar", length: 255 }),
+    __metadata("design:type", String)
+], Certificate.prototype, "originalName", void 0);
 exports.Certificate = Certificate = __decorate([
     (0, typeorm_1.Entity)("certificates"),
     (0, typeorm_1.Unique)(["userId", "subCategoryId"])

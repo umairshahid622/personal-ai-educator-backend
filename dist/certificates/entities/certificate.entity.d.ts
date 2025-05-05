@@ -8,4 +8,5 @@ export declare class Certificate {
     subCategoryId: string;
     pdfPath: string;
     issuedAt: Date;
+    originalName: string;
 }

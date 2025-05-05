@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DegreeController = void 0;
 const common_1 = require("@nestjs/common");
 const degree_service_1 = require("./degree.service");
+const auth_guard_1 = require("../guards/auth/auth.guard");
 let DegreeController = class DegreeController {
     constructor(degreeService) {
         this.degreeService = degreeService;
@@ -34,6 +35,7 @@ __decorate([
 ], DegreeController.prototype, "findAll", null);
 exports.DegreeController = DegreeController = __decorate([
     (0, common_1.Controller)("degree"),
+    (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
     __metadata("design:paramtypes", [degree_service_1.DegreeService])
 ], DegreeController);
 //# sourceMappingURL=degree.controller.js.map

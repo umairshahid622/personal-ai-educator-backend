@@ -15,7 +15,7 @@ export class DegreeService {
   async findForUser(userId: string): Promise<Degree[]> {
     return this.degreeRepo.find({
       where: { userId },
-      relations: ["category"], // eager load Category if useful
+      relations: ["category"],
       order: { issuedAt: "DESC" },
     });
   }
