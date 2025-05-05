@@ -1,34 +1,22 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-} from "typeorm";
-import { ApiProperty } from "@nestjs/swagger";
+import { SubCategory } from "src/subcategory/entities/subcategory.entity";
+import { User } from "src/users/entities/users.entity";
+import { Entity, Unique, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column, CreateDateColumn } from "typeorm";
 
-@Entity()
-export class Certificates {
-  @PrimaryGeneratedColumn('uuid')
-  @ApiProperty()
-  id: string;
 
-  @Column("uuid")
-  @ApiProperty({ example: 1 })
-  userId: string;
 
-  @Column()
-  @ApiProperty({ example: "Computer Science" })
-  courseName: string;
+@Entity("certificates")
+@Unique(["userId","subCategoryId"])
+export class Certificate {
+  @PrimaryGeneratedColumn("uuid") id: string;
 
-  @Column()
-  @ApiProperty({ example: "category-uuid" })
-  categoryId: string;
+  @ManyToOne(()=>User, (u)=>u.certificates,{onDelete:"CASCADE"})
+  @JoinColumn({name:"user_id"}) user: User;
+  @Column("uuid",{name:"user_id"}) userId: string;
 
-  @Column({ nullable: true })
-  @ApiProperty({ example: "http://localhost:3001/assets/certificates/1.pdf" })
-  certificateUrl: string;
+  @ManyToOne(()=>SubCategory,(s)=>s.certificates,{onDelete:"CASCADE"})
+  @JoinColumn({name:"subcategory_id"}) subCategory: SubCategory;
+  @Column("uuid",{name:"subcategory_id"}) subCategoryId: string;
 
-  @CreateDateColumn()
-  @ApiProperty()
-  issuedAt: Date;
+  @Column("text",{name:"pdf_path"}) pdfPath: string;
+  @CreateDateColumn({name:"issued_at"}) issuedAt: Date;
 }

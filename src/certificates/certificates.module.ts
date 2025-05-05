@@ -2,15 +2,13 @@ import { Module } from "@nestjs/common";
 import { CertificatesService } from "./certificates.service";
 import { CertificatesController } from "./certificates.controller";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Certificates } from "./entities/certificate.entity";
+import { Certificate } from "./entities/certificate.entity";
 import { JwtModule } from "@nestjs/jwt";
-import { ConfigModule } from "@nestjs/config/dist/config.module";
-import { ConfigService } from "@nestjs/config/dist/config.service";
-import { User } from "src/users/entities/users.entity";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Certificates, User]),
+    TypeOrmModule.forFeature([Certificate]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

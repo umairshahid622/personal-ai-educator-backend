@@ -40,21 +40,6 @@ let CategoriesService = class CategoriesService {
             throw new Error("Failed to fetch categories");
         }
     }
-    create(createCategoryDto) {
-        return "This action adds a new category";
-    }
-    findAll() {
-        return `This action returns all categories`;
-    }
-    findOne(id) {
-        return `This action returns a #${id} category`;
-    }
-    update(id, updateCategoryDto) {
-        return `This action updates a #${id} category`;
-    }
-    remove(id) {
-        return `This action removes a #${id} category`;
-    }
 };
 exports.CategoriesService = CategoriesService;
 exports.CategoriesService = CategoriesService = __decorate([

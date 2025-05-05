@@ -13,19 +13,17 @@ const certificates_controller_1 = require("./certificates.controller");
 const typeorm_1 = require("@nestjs/typeorm");
 const certificate_entity_1 = require("./entities/certificate.entity");
 const jwt_1 = require("@nestjs/jwt");
-const config_module_1 = require("@nestjs/config/dist/config.module");
-const config_service_1 = require("@nestjs/config/dist/config.service");
-const users_entity_1 = require("../users/entities/users.entity");
+const config_1 = require("@nestjs/config");
 let CertificatesModule = class CertificatesModule {
 };
 exports.CertificatesModule = CertificatesModule;
 exports.CertificatesModule = CertificatesModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([certificate_entity_1.Certificates, users_entity_1.User]),
+            typeorm_1.TypeOrmModule.forFeature([certificate_entity_1.Certificate]),
             jwt_1.JwtModule.registerAsync({
-                imports: [config_module_1.ConfigModule],
-                inject: [config_service_1.ConfigService],
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
                 useFactory: (config) => ({
                     global: true,
                     secret: config.get("JWT_SECRET"),

@@ -22,12 +22,13 @@ const categories_module_1 = require("./categories/categories.module");
 const category_entity_1 = require("./categories/entities/category.entity");
 const progress_module_1 = require("./progress/progress.module");
 const institutes_module_1 = require("./institutes/institutes.module");
-const certificates_module_1 = require("./certificates/certificates.module");
 const subcategory_module_1 = require("./subcategory/subcategory.module");
 const subcategory_entity_1 = require("./subcategory/entities/subcategory.entity");
 const ebook_module_1 = require("./ebook/ebook.module");
 const ebook_entity_1 = require("./ebook/entities/ebook.entity");
 const quiz_module_1 = require("./quiz/quiz.module");
+const certificates_module_1 = require("./certificates/certificates.module");
+const degree_module_1 = require("./degree/degree.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -67,10 +68,11 @@ exports.AppModule = AppModule = __decorate([
             categories_module_1.CategoriesModule,
             progress_module_1.ProgressModule,
             institutes_module_1.InstitutesModule,
-            certificates_module_1.CertificatesModule,
             subcategory_module_1.SubcategoryModule,
             ebook_module_1.EbookModule,
             quiz_module_1.QuizModule,
+            certificates_module_1.CertificatesModule,
+            degree_module_1.DegreeModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

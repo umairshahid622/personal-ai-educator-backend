@@ -14,6 +14,7 @@ const typeorm_1 = require("typeorm");
 const category_entity_1 = require("../../categories/entities/category.entity");
 const course_entity_1 = require("../../course/entities/course.entity");
 const quiz_entity_1 = require("../../quiz/entities/quiz.entity");
+const certificate_entity_1 = require("../../certificates/entities/certificate.entity");
 let SubCategory = class SubCategory {
 };
 exports.SubCategory = SubCategory;
@@ -39,6 +40,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => course_entity_1.Courses, (course) => course.subCategory),
     __metadata("design:type", Array)
 ], SubCategory.prototype, "courses", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => certificate_entity_1.Certificate, (cert) => cert.subCategory),
+    __metadata("design:type", Array)
+], SubCategory.prototype, "certificates", void 0);
 exports.SubCategory = SubCategory = __decorate([
     (0, typeorm_1.Entity)()
 ], SubCategory);

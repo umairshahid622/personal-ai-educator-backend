@@ -6,6 +6,13 @@ import { Repository } from "typeorm";
 import { Quiz } from "./entities/quiz.entity";
 import { OpenRouterClient } from "src/common/openrouter.client";
 import { SubCategory } from "src/subcategory/entities/subcategory.entity";
+import { Certificate } from "src/certificates/entities/certificate.entity";
+import { Degree } from "src/degree/entities/degree.entity";
+import { createWriteStream, existsSync, mkdirSync, writeFileSync } from "fs";
+import { join } from "path";
+import * as PDFKit from "pdfkit";
+import { User } from "src/users/entities/users.entity";
+import { Categories } from "src/categories/entities/category.entity";
 
 export interface Mcq {
   question: string;
@@ -19,8 +26,19 @@ export class QuizService {
   constructor(
     @InjectRepository(Quiz)
     private readonly quizRepo: Repository<Quiz>,
+
     @InjectRepository(SubCategory)
-    private readonly subCatRepo: Repository<SubCategory>
+    private readonly subCatRepo: Repository<SubCategory>,
+
+    @InjectRepository(Certificate)
+    private readonly certRepo: Repository<Certificate>,
+
+    @InjectRepository(Degree) private readonly degreeRepo: Repository<Degree>,
+
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+
+    @InjectRepository(Categories)
+    private readonly catRepo: Repository<Categories>
   ) {}
 
   async getOrCreateForUser(
@@ -128,27 +146,60 @@ No explanation—just JSON.`;
     dto: UpdateQuizItemDto
   ): Promise<any> {
     const { subCategoryId, title, marks } = dto;
-
     const quiz = await this.quizRepo.findOne({
       where: { userId, subCategoryId },
     });
-    if (!quiz) throw new NotFoundException("Quiz bundle not found");
+    if (!quiz) throw new NotFoundException();
 
     const idx = quiz.items.findIndex((i) => i.title === title);
-    if (idx === -1) throw new NotFoundException("Quiz title not found");
+    if (idx < 0) throw new NotFoundException();
 
     const passed = marks >= 7;
     quiz.items[idx].status = passed ? "passed" : "fail";
+    // unlock next
+    if (
+      passed &&
+      idx + 1 < quiz.items.length &&
+      quiz.items[idx + 1].status === "locked"
+    ) {
+      quiz.items[idx + 1].status = "unlocked";
+    }
+    quiz.isPassed = quiz.items.every((it) => it.status === "passed");
+    await this.quizRepo.save(quiz);
 
-    if (passed && idx + 1 < quiz.items.length) {
-      if (quiz.items[idx + 1].status === "locked") {
-        quiz.items[idx + 1].status = "unlocked";
+    // — if user just now passed this subCat, create subCat certificate —
+    if (passed && quiz.isPassed) {
+      const exists = await this.certRepo.findOne({
+        where: { userId, subCategoryId },
+      });
+      if (!exists) {
+        const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+        await this.certRepo.save({ userId, subCategoryId, pdfPath });
+      }
+      // — now check if all siblings passed to issue degree —
+      const subCat = await this.subCatRepo.findOne({
+        where: { id: subCategoryId },
+        relations: ["category", "category.subCategories"],
+      });
+      const allPassed = await Promise.all(
+        subCat!.category.subCategories.map(async (sc) => {
+          const qb = await this.quizRepo.findOne({
+            where: { userId, subCategoryId: sc.id },
+          });
+          return qb?.isPassed === true;
+        })
+      ).then((arr) => arr.every((x) => x));
+      if (allPassed) {
+        const categoryId = subCat!.category.uuid;
+        const existsDeg = await this.degreeRepo.findOne({
+          where: { userId, categoryId },
+        });
+        if (!existsDeg) {
+          const pdfPath = await this.buildDegreePdf(userId, categoryId);
+          await this.degreeRepo.save({ userId, categoryId, pdfPath });
+        }
       }
     }
-
-    quiz.isPassed = quiz.items.every((it) => it.status === "passed");
-
-    await this.quizRepo.save(quiz);
 
     return {
       message: passed ? "Quiz has been passed." : "Quiz has been failed.",
@@ -169,5 +220,112 @@ No explanation—just JSON.`;
     const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
     const jsonText = fence ? fence[1] : raw;
     return JSON.parse(jsonText.trim());
+  }
+
+  private async buildSubCategoryPdf(
+    userId: string,
+    subCategoryId: string
+  ): Promise<string> {
+    const user = await this.userRepo.findOne({ where: { uuid: userId } });
+    if (!user) throw new NotFoundException("User not found");
+    const subCat = await this.subCatRepo.findOne({
+      where: { id: subCategoryId },
+    });
+    if (!subCat) throw new NotFoundException("SubCategory not found");
+
+    const dir = join(process.cwd(), "assets", "certs");
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+    const timestamp = Date.now();
+    const filename = `${timestamp}.pdf`;
+
+    const outPath = join(dir, filename);
+
+    // 3. create a PDFKit document
+    const doc = new PDFKit({ size: "A4", margin: 50 });
+    const writeStream = createWriteStream(outPath);
+    doc.pipe(writeStream);
+
+    // 4. draw your certificate content
+    doc
+      .fontSize(24)
+      .text("Certificate of Completion", { align: "center" })
+      .moveDown(2)
+      .fontSize(16)
+      .text(`This certifies that user ${user.displayName}`, { align: "center" })
+      .moveDown()
+      .text(`has successfully completed all quizzes in sub‐category:`, {
+        align: "center",
+      })
+      .moveDown()
+      .fontSize(18)
+      .text(`${subCat.name}`, { align: "center", underline: true })
+      .moveDown(3)
+      .fontSize(12)
+      .text(`Issued on ${new Date().toLocaleDateString()}`, {
+        align: "center",
+      });
+
+    // 5. finalize & flush to disk
+    doc.end();
+    await new Promise<void>((res, rej) => {
+      writeStream.on("finish", () => res());
+      writeStream.on("error", (err) => rej(err));
+    });
+
+    return `/assets/certs/${filename}`;
+  }
+
+  private async buildDegreePdf(
+    userId: string,
+    categoryId: string
+  ): Promise<string> {
+    const user = await this.userRepo.findOne({ where: { uuid: userId } });
+    if (!user) throw new NotFoundException("User not found");
+    const category = await this.catRepo.findOne({
+      where: { uuid: categoryId },
+    });
+    if (!category) throw new NotFoundException("Category not found");
+
+    const dir = join(process.cwd(), "assets", "degrees");
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+    const timestamp = Date.now();
+    const filename = `${timestamp}.pdf`;
+
+    const outPath = join(dir, filename);
+
+    // const
+
+    const doc = new PDFKit({ size: "A4", margin: 50 });
+    const writeStream = createWriteStream(outPath);
+    doc.pipe(writeStream);
+
+    doc
+      .fontSize(24)
+      .text("Degree Completion Certificate", { align: "center" })
+      .moveDown(2)
+      .fontSize(16)
+      .text(`This certifies that user ${user.displayName}`, { align: "center" })
+      .moveDown()
+      .text(`has successfully passed ALL sub‐categories in:`, {
+        align: "center",
+      })
+      .moveDown()
+      .fontSize(18)
+      .text(`${category.name}`, { align: "center", underline: true })
+      .moveDown(3)
+      .fontSize(12)
+      .text(`Issued on ${new Date().toLocaleDateString()}`, {
+        align: "center",
+      });
+
+    doc.end();
+    await new Promise<void>((res, rej) => {
+      writeStream.on("finish", () => res());
+      writeStream.on("error", (err) => rej(err));
+    });
+
+    return `/assets/degrees/${filename}`;
   }
 }

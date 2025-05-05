@@ -15,13 +15,24 @@ const quiz_entity_1 = require("./entities/quiz.entity");
 const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const subcategory_entity_1 = require("../subcategory/entities/subcategory.entity");
+const certificate_entity_1 = require("../certificates/entities/certificate.entity");
+const degree_entity_1 = require("../degree/entities/degree.entity");
+const users_entity_1 = require("../users/entities/users.entity");
+const category_entity_1 = require("../categories/entities/category.entity");
 let QuizModule = class QuizModule {
 };
 exports.QuizModule = QuizModule;
 exports.QuizModule = QuizModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([quiz_entity_1.Quiz, subcategory_entity_1.SubCategory]),
+            typeorm_1.TypeOrmModule.forFeature([
+                quiz_entity_1.Quiz,
+                subcategory_entity_1.SubCategory,
+                certificate_entity_1.Certificate,
+                degree_entity_1.Degree,
+                users_entity_1.User,
+                category_entity_1.Categories,
+            ]),
             jwt_1.JwtModule.registerAsync({
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],

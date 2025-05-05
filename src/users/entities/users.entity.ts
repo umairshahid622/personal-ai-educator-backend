@@ -1,4 +1,6 @@
 import { IsEmail, IsNotEmpty, MinLength, IsDateString } from "class-validator";
+import { Certificate } from "src/certificates/entities/certificate.entity";
+import { Degree } from "src/degree/entities/degree.entity";
 import { Quiz } from "src/quiz/entities/quiz.entity";
 import {
   Column,
@@ -36,10 +38,15 @@ export class User {
   @OneToMany(() => Quiz, (quiz) => quiz.user)
   quizzes: Quiz[];
 
+  @OneToMany(() => Certificate, (cert) => cert.user)
+  certificates: Certificate[];
+
+  @OneToMany(() => Degree, (deg) => deg.user)
+  degrees: Degree[];
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-  name: string;
 }

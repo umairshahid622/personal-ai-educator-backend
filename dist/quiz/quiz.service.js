@@ -19,10 +19,21 @@ const typeorm_2 = require("typeorm");
 const quiz_entity_1 = require("./entities/quiz.entity");
 const openrouter_client_1 = require("../common/openrouter.client");
 const subcategory_entity_1 = require("../subcategory/entities/subcategory.entity");
+const certificate_entity_1 = require("../certificates/entities/certificate.entity");
+const degree_entity_1 = require("../degree/entities/degree.entity");
+const fs_1 = require("fs");
+const path_1 = require("path");
+const PDFKit = require("pdfkit");
+const users_entity_1 = require("../users/entities/users.entity");
+const category_entity_1 = require("../categories/entities/category.entity");
 let QuizService = class QuizService {
-    constructor(quizRepo, subCatRepo) {
+    constructor(quizRepo, subCatRepo, certRepo, degreeRepo, userRepo, catRepo) {
         this.quizRepo = quizRepo;
         this.subCatRepo = subCatRepo;
+        this.certRepo = certRepo;
+        this.degreeRepo = degreeRepo;
+        this.userRepo = userRepo;
+        this.catRepo = catRepo;
         this.ai = new openrouter_client_1.OpenRouterClient();
     }
     async getOrCreateForUser(userId, subCategoryId) {
@@ -115,19 +126,48 @@ No explanation—just JSON.`;
             where: { userId, subCategoryId },
         });
         if (!quiz)
-            throw new common_1.NotFoundException("Quiz bundle not found");
+            throw new common_1.NotFoundException();
         const idx = quiz.items.findIndex((i) => i.title === title);
-        if (idx === -1)
-            throw new common_1.NotFoundException("Quiz title not found");
+        if (idx < 0)
+            throw new common_1.NotFoundException();
         const passed = marks >= 7;
         quiz.items[idx].status = passed ? "passed" : "fail";
-        if (passed && idx + 1 < quiz.items.length) {
-            if (quiz.items[idx + 1].status === "locked") {
-                quiz.items[idx + 1].status = "unlocked";
-            }
+        if (passed &&
+            idx + 1 < quiz.items.length &&
+            quiz.items[idx + 1].status === "locked") {
+            quiz.items[idx + 1].status = "unlocked";
         }
         quiz.isPassed = quiz.items.every((it) => it.status === "passed");
         await this.quizRepo.save(quiz);
+        if (passed && quiz.isPassed) {
+            const exists = await this.certRepo.findOne({
+                where: { userId, subCategoryId },
+            });
+            if (!exists) {
+                const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+                await this.certRepo.save({ userId, subCategoryId, pdfPath });
+            }
+            const subCat = await this.subCatRepo.findOne({
+                where: { id: subCategoryId },
+                relations: ["category", "category.subCategories"],
+            });
+            const allPassed = await Promise.all(subCat.category.subCategories.map(async (sc) => {
+                const qb = await this.quizRepo.findOne({
+                    where: { userId, subCategoryId: sc.id },
+                });
+                return qb?.isPassed === true;
+            })).then((arr) => arr.every((x) => x));
+            if (allPassed) {
+                const categoryId = subCat.category.uuid;
+                const existsDeg = await this.degreeRepo.findOne({
+                    where: { userId, categoryId },
+                });
+                if (!existsDeg) {
+                    const pdfPath = await this.buildDegreePdf(userId, categoryId);
+                    await this.degreeRepo.save({ userId, categoryId, pdfPath });
+                }
+            }
+        }
         return {
             message: passed ? "Quiz has been passed." : "Quiz has been failed.",
             status: passed ? "passed" : "fail",
@@ -146,13 +186,107 @@ No explanation—just JSON.`;
         const jsonText = fence ? fence[1] : raw;
         return JSON.parse(jsonText.trim());
     }
+    async buildSubCategoryPdf(userId, subCategoryId) {
+        const user = await this.userRepo.findOne({ where: { uuid: userId } });
+        if (!user)
+            throw new common_1.NotFoundException("User not found");
+        const subCat = await this.subCatRepo.findOne({
+            where: { id: subCategoryId },
+        });
+        if (!subCat)
+            throw new common_1.NotFoundException("SubCategory not found");
+        const dir = (0, path_1.join)(process.cwd(), "assets", "certs");
+        if (!(0, fs_1.existsSync)(dir))
+            (0, fs_1.mkdirSync)(dir, { recursive: true });
+        const timestamp = Date.now();
+        const filename = `${timestamp}.pdf`;
+        const outPath = (0, path_1.join)(dir, filename);
+        const doc = new PDFKit({ size: "A4", margin: 50 });
+        const writeStream = (0, fs_1.createWriteStream)(outPath);
+        doc.pipe(writeStream);
+        doc
+            .fontSize(24)
+            .text("Certificate of Completion", { align: "center" })
+            .moveDown(2)
+            .fontSize(16)
+            .text(`This certifies that user ${user.displayName}`, { align: "center" })
+            .moveDown()
+            .text(`has successfully completed all quizzes in sub‐category:`, {
+            align: "center",
+        })
+            .moveDown()
+            .fontSize(18)
+            .text(`${subCat.name}`, { align: "center", underline: true })
+            .moveDown(3)
+            .fontSize(12)
+            .text(`Issued on ${new Date().toLocaleDateString()}`, {
+            align: "center",
+        });
+        doc.end();
+        await new Promise((res, rej) => {
+            writeStream.on("finish", () => res());
+            writeStream.on("error", (err) => rej(err));
+        });
+        return `/assets/certs/${filename}`;
+    }
+    async buildDegreePdf(userId, categoryId) {
+        const user = await this.userRepo.findOne({ where: { uuid: userId } });
+        if (!user)
+            throw new common_1.NotFoundException("User not found");
+        const category = await this.catRepo.findOne({
+            where: { uuid: categoryId },
+        });
+        if (!category)
+            throw new common_1.NotFoundException("Category not found");
+        const dir = (0, path_1.join)(process.cwd(), "assets", "degrees");
+        if (!(0, fs_1.existsSync)(dir))
+            (0, fs_1.mkdirSync)(dir, { recursive: true });
+        const timestamp = Date.now();
+        const filename = `${timestamp}.pdf`;
+        const outPath = (0, path_1.join)(dir, filename);
+        const doc = new PDFKit({ size: "A4", margin: 50 });
+        const writeStream = (0, fs_1.createWriteStream)(outPath);
+        doc.pipe(writeStream);
+        doc
+            .fontSize(24)
+            .text("Degree Completion Certificate", { align: "center" })
+            .moveDown(2)
+            .fontSize(16)
+            .text(`This certifies that user ${user.displayName}`, { align: "center" })
+            .moveDown()
+            .text(`has successfully passed ALL sub‐categories in:`, {
+            align: "center",
+        })
+            .moveDown()
+            .fontSize(18)
+            .text(`${category.name}`, { align: "center", underline: true })
+            .moveDown(3)
+            .fontSize(12)
+            .text(`Issued on ${new Date().toLocaleDateString()}`, {
+            align: "center",
+        });
+        doc.end();
+        await new Promise((res, rej) => {
+            writeStream.on("finish", () => res());
+            writeStream.on("error", (err) => rej(err));
+        });
+        return `/assets/degrees/${filename}`;
+    }
 };
 exports.QuizService = QuizService;
 exports.QuizService = QuizService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(quiz_entity_1.Quiz)),
     __param(1, (0, typeorm_1.InjectRepository)(subcategory_entity_1.SubCategory)),
+    __param(2, (0, typeorm_1.InjectRepository)(certificate_entity_1.Certificate)),
+    __param(3, (0, typeorm_1.InjectRepository)(degree_entity_1.Degree)),
+    __param(4, (0, typeorm_1.InjectRepository)(users_entity_1.User)),
+    __param(5, (0, typeorm_1.InjectRepository)(category_entity_1.Categories)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], QuizService);
 //# sourceMappingURL=quiz.service.js.map

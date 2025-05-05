@@ -11,6 +11,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const class_validator_1 = require("class-validator");
+const certificate_entity_1 = require("../../certificates/entities/certificate.entity");
+const degree_entity_1 = require("../../degree/entities/degree.entity");
 const quiz_entity_1 = require("../../quiz/entities/quiz.entity");
 const typeorm_1 = require("typeorm");
 let User = class User {
@@ -47,6 +49,14 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => quiz_entity_1.Quiz, (quiz) => quiz.user),
     __metadata("design:type", Array)
 ], User.prototype, "quizzes", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => certificate_entity_1.Certificate, (cert) => cert.user),
+    __metadata("design:type", Array)
+], User.prototype, "certificates", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => degree_entity_1.Degree, (deg) => deg.user),
+    __metadata("design:type", Array)
+], User.prototype, "degrees", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

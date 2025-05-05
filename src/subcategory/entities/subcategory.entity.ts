@@ -9,6 +9,7 @@ import {
 import { Categories } from "../../categories/entities/category.entity";
 import { Courses } from "../../course/entities/course.entity";
 import { Quiz } from "src/quiz/entities/quiz.entity";
+import { Certificate } from "src/certificates/entities/certificate.entity";
 
 @Entity()
 export class SubCategory {
@@ -28,4 +29,7 @@ export class SubCategory {
 
   @OneToMany(() => Courses, (course) => course.subCategory)
   courses: Courses[];
+
+  @OneToMany(() => Certificate, (cert) => cert.subCategory)
+  certificates: Certificate[];
 }

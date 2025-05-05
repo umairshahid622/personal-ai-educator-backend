@@ -28,21 +28,6 @@ let SubcategoryService = class SubcategoryService {
             order: { name: "ASC" },
         });
     }
-    create(createSubcategoryDto) {
-        return "This action adds a new subcategory";
-    }
-    findAll() {
-        return `This action returns all subcategory`;
-    }
-    findOne(id) {
-        return `This action returns a #${id} subcategory`;
-    }
-    update(id, updateSubcategoryDto) {
-        return `This action updates a #${id} subcategory`;
-    }
-    remove(id) {
-        return `This action removes a #${id} subcategory`;
-    }
 };
 exports.SubcategoryService = SubcategoryService;
 exports.SubcategoryService = SubcategoryService = __decorate([

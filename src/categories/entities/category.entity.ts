@@ -1,10 +1,11 @@
 import { Courses } from "src/course/entities/course.entity";
+import { Degree } from "src/degree/entities/degree.entity";
 import { SubCategory } from "src/subcategory/entities/subcategory.entity";
 import { Entity, Column, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity({ name: "categories" })
 export class Categories {
-  @PrimaryGeneratedColumn("uuid") 
+  @PrimaryGeneratedColumn("uuid")
   uuid: string;
 
   @Column()
@@ -18,4 +19,7 @@ export class Categories {
 
   @OneToMany(() => SubCategory, (sc) => sc.category)
   subCategories: SubCategory[];
+
+  @OneToMany(() => Degree, (deg) => deg.category)
+  degrees: Degree[];
 }

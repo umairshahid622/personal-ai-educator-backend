@@ -14,13 +14,14 @@ import { CategoriesModule } from "./categories/categories.module";
 import { Categories } from "./categories/entities/category.entity";
 import { ProgressModule } from "./progress/progress.module";
 import { InstitutesModule } from "./institutes/institutes.module";
-import { CertificatesModule } from "./certificates/certificates.module";
 import { SubcategoryModule } from "./subcategory/subcategory.module";
 import { SubCategory } from "./subcategory/entities/subcategory.entity";
 import { CourseSeeder } from "./utilities/courses.seed";
 import { EbookModule } from "./ebook/ebook.module";
 import { Ebook } from "./ebook/entities/ebook.entity";
 import { QuizModule } from './quiz/quiz.module';
+import { CertificatesModule } from './certificates/certificates.module';
+import { DegreeModule } from './degree/degree.module';
 
 @Module({
   imports: [
@@ -63,13 +64,15 @@ import { QuizModule } from './quiz/quiz.module';
 
     InstitutesModule,
 
-    CertificatesModule,
-
     SubcategoryModule,
 
     EbookModule,
 
     QuizModule,
+
+    CertificatesModule,
+
+    DegreeModule,
   ],
   controllers: [AppController],
   providers: [AppService],
