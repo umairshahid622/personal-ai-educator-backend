@@ -74,7 +74,6 @@ export class CourseSeeder implements OnModuleInit {
         subCategory = await this.subCategoryRepo.findOne({
           where: {
             name: subCatName,
-            isPassed: false,
             category: category, // ← pass the entity directly
           },
           relations: ["category"],

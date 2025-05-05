@@ -66,7 +66,6 @@ let CourseSeeder = class CourseSeeder {
                 subCategory = await this.subCategoryRepo.findOne({
                     where: {
                         name: subCatName,
-                        isPassed: false,
                         category: category,
                     },
                     relations: ["category"],

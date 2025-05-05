@@ -14,10 +14,10 @@ export class UsersController {
 
   @Patch("updateName")
   async updateUserName(
-    @Req() req,
+    @Req() req: Request,
     @Body("name") name: string
   ): Promise<{ message: string }> {
-    const userId = req.user.userId;
+    const userId = req["user"]["userId"];
     const message = await this.usersService.updateName(userId, name);
     return { message };
   }

@@ -11,19 +11,26 @@ class OpenRouterClient {
         if (!this.apiKey) {
             throw new Error("Missing OPENROUTER_API_KEY in env");
         }
-        const resp = await axios_1.default.post(this.baseUrl, {
-            model: "deepseek/deepseek-r1:free",
-            messages: [{ role: "user", content: prompt }],
-        }, {
-            headers: {
-                Authorization: `Bearer ${this.apiKey}`,
-                "Content-Type": "application/json",
-            },
-        });
-        if (resp.status !== 200) {
-            throw new Error(`AI error: ${resp.status} ${JSON.stringify(resp.data)}`);
+        try {
+            const resp = await axios_1.default.post(this.baseUrl, {
+                model: "deepseek/deepseek-r1:free",
+                messages: [{ role: "user", content: prompt }],
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                    "Content-Type": "application/json",
+                },
+            });
+            if (resp.status !== 200) {
+                throw new Error(`AI error: ${resp.status} ${JSON.stringify(resp.data)}`);
+            }
+            const result = resp.data;
+            return result;
         }
-        return resp.data;
+        catch (error) {
+            console.log(error);
+            throw new Error(error);
+        }
     }
 }
 exports.OpenRouterClient = OpenRouterClient;

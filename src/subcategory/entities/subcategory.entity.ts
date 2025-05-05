@@ -28,7 +28,4 @@ export class SubCategory {
 
   @OneToMany(() => Courses, (course) => course.subCategory)
   courses: Courses[];
-
-  @Column({ default: false })
-  isPassed: boolean;
 }

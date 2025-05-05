@@ -24,7 +24,7 @@ let UsersController = class UsersController {
         return this.usersService.getUserById(req["user"]["userId"]);
     }
     async updateUserName(req, name) {
-        const userId = req.user.userId;
+        const userId = req["user"]["userId"];
         const message = await this.usersService.updateName(userId, name);
         return { message };
     }
@@ -42,7 +42,7 @@ __decorate([
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Body)("name")),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Request, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateUserName", null);
 exports.UsersController = UsersController = __decorate([

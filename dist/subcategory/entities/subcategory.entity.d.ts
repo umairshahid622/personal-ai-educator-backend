@@ -7,5 +7,4 @@ export declare class SubCategory {
     category: Categories;
     quizzes: Quiz[];
     courses: Courses[];
-    isPassed: boolean;
 }

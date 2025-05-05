@@ -39,10 +39,6 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => course_entity_1.Courses, (course) => course.subCategory),
     __metadata("design:type", Array)
 ], SubCategory.prototype, "courses", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ default: false }),
-    __metadata("design:type", Boolean)
-], SubCategory.prototype, "isPassed", void 0);
 exports.SubCategory = SubCategory = __decorate([
     (0, typeorm_1.Entity)()
 ], SubCategory);

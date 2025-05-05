@@ -10,7 +10,11 @@ import { Type } from "class-transformer";
 
 class QuizItemDto {
   @IsString() title: string;
-  @IsIn(["locked", "unlocked"]) status: "locked" | "unlocked";
+  @IsIn(["locked", "unlocked"]) status:
+    | "locked"
+    | "unlocked"
+    | "passed"
+    | "fail";
 }
 
 export class CreateQuizDto {

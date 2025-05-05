@@ -33,7 +33,10 @@ export class Quiz {
   subCategoryId: string;
 
   @Column({ type: "jsonb" })
-  items: { title: string; status: "locked" | "unlocked" }[];
+  items: { title: string; status: "locked" | "unlocked" | "passed" | "fail" }[];
+
+  @Column({ type: "boolean", default: false })
+  isPassed: boolean;
 
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;

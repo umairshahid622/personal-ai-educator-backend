@@ -9,10 +9,15 @@ import {
   UseGuards,
   Req,
   Query,
+  NotFoundException,
+  UsePipes,
+  ValidationPipe,
 } from "@nestjs/common";
 import { QuizService } from "./quiz.service";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
 import { AuthGuard } from "src/guards/auth/auth.guard";
+import { Quiz } from "./entities/quiz.entity";
+import { UpdateQuizItemDto } from "./dto/update-quiz.dto";
 
 @Controller("quizzes")
 @UseGuards(AuthGuard)
@@ -26,5 +31,27 @@ export class QuizController {
   ) {
     const userId = req["user"]["userId"];
     return this.quizService.getOrCreateForUser(userId, subId);
+  }
+  @Get("exam")
+  async generateExamByTitle(
+    @Query("title") title: string,
+    @Query("subCategoryId") subCategoryId: string,
+    @Req() req: Request
+  ) {
+    if (!title) {
+      throw new NotFoundException("quiz title is required");
+    }
+    const userId: string = req["user"]["userId"];
+
+    return this.quizService.generateExamByTitle(userId, subCategoryId, title);
+  }
+
+  @Patch("item-status")
+  async updateItemStatus(
+    @Req() req: Request,
+    @Body() dto: UpdateQuizItemDto
+  ): Promise<UpdateQuizItemDto> {
+    const userId = req["user"]["userId"];
+    return this.quizService.updateStatusByTitle(userId, dto);
   }
 }

@@ -16,6 +16,7 @@ exports.QuizController = void 0;
 const common_1 = require("@nestjs/common");
 const quiz_service_1 = require("./quiz.service");
 const auth_guard_1 = require("../guards/auth/auth.guard");
+const update_quiz_dto_1 = require("./dto/update-quiz.dto");
 let QuizController = class QuizController {
     constructor(quizService) {
         this.quizService = quizService;
@@ -23,6 +24,17 @@ let QuizController = class QuizController {
     async getOrCreate(req, subId) {
         const userId = req["user"]["userId"];
         return this.quizService.getOrCreateForUser(userId, subId);
+    }
+    async generateExamByTitle(title, subCategoryId, req) {
+        if (!title) {
+            throw new common_1.NotFoundException("quiz title is required");
+        }
+        const userId = req["user"]["userId"];
+        return this.quizService.generateExamByTitle(userId, subCategoryId, title);
+    }
+    async updateItemStatus(req, dto) {
+        const userId = req["user"]["userId"];
+        return this.quizService.updateStatusByTitle(userId, dto);
     }
 };
 exports.QuizController = QuizController;
@@ -34,6 +46,24 @@ __decorate([
     __metadata("design:paramtypes", [Request, String]),
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "getOrCreate", null);
+__decorate([
+    (0, common_1.Get)("exam"),
+    __param(0, (0, common_1.Query)("title")),
+    __param(1, (0, common_1.Query)("subCategoryId")),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Request]),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "generateExamByTitle", null);
+__decorate([
+    (0, common_1.Patch)("item-status"),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Request,
+        update_quiz_dto_1.UpdateQuizItemDto]),
+    __metadata("design:returntype", Promise)
+], QuizController.prototype, "updateItemStatus", null);
 exports.QuizController = QuizController = __decorate([
     (0, common_1.Controller)("quizzes"),
     (0, common_1.UseGuards)(auth_guard_1.AuthGuard),
