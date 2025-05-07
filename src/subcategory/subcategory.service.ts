@@ -15,10 +15,8 @@ export class SubcategoryService {
   async findByCategory(categoryId: string): Promise<SubCategory[]> {
     return this.subRepo.find({
       where: { category: { uuid: categoryId } },
-      relations: ["category"], // eager parent if you need it
-      order: { name: "ASC" }, // optional
+      relations: ["category"],
+      order: { name: "ASC" },
     });
   }
-
-
 }

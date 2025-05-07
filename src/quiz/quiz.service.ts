@@ -23,7 +23,7 @@ const uniLogoPath = path.join(
   "images",
   "bahria-university-logo.png"
 );
-const accentLogoPath = path.join(assetsRoot, "images", "accentLogo.png");
+const accentLogoPath = path.join(assetsRoot, "images", "blackLogo.png");
 const signaturePath = path.join(assetsRoot, "images", "signature.png");
 
 // fonts
@@ -267,102 +267,128 @@ No explanation—just JSON.`;
 
     const outPath = join(dir, filename);
 
-    // 3. create a PDFKit document
-    // const doc = new PDFKit({ size: "A4", margin: 50 });
-    // const writeStream = createWriteStream(outPath);
-    // doc.pipe(writeStream);
-
     const doc = new PDFKit({
       size: "A4",
       layout: "landscape",
       margins: { top: 50, bottom: 50, left: 50, right: 50 },
     });
-
-    const primaryColor = "#352626";
     const writeStream = createWriteStream(outPath);
     doc.pipe(writeStream);
 
+    const { width: W, height: H, margins } = doc.page;
+    const contentWidth = W - margins.left - margins.right;
+    const contentHeight = H - margins.top - margins.bottom;
+    const primaryColor = "#352626";
+
+    // 1) Draw outer border
     doc
       .lineWidth(3)
       .strokeColor(primaryColor)
-      .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
+      .rect(
+        margins.left - 10,
+        margins.top - 10,
+        W - 2 * (margins.left - 10),
+        H - 2 * (margins.top - 10)
+      )
       .stroke();
 
-    // 2. Logos
-    doc.image(uniLogoPath, 40, 40, { width: 70 });
-    const accentW = 220;
-    doc.image(accentLogoPath, doc.page.width - 40 - accentW, 40, {
-      width: accentW,
+    // 2) Logos
+    doc.image(uniLogoPath, margins.left, margins.top, { width: 70 });
+    doc.image(accentLogoPath, W - margins.right - 220, margins.top, {
+      width: 220,
     });
 
-    // 3. Main Title
-    const titleY = 100;
-    doc
-      .font(fontBold)
-      .fontSize(52)
-      .fillColor(primaryColor)
-      .text("COURSE CERTIFICATE", 0, titleY, { align: "center" });
+    // 3) Main centered block (minus the date)
+    const lines = [
+      {
+        text: "COURSE CERTIFICATE",
+        font: fontBold,
+        size: 52,
+        color: primaryColor,
+      },
+      { text: "AWARDED TO", font: fontRegular, size: 18, color: "#555555" },
+      {
+        text: user.displayName,
+        font: fontSemiBold,
+        size: 32,
+        color: primaryColor,
+      },
+      {
+        text: "For successfully completing a free online course",
+        font: fontRegular,
+        size: 16,
+        color: "#333333",
+      },
+      { text: subCat.name, font: fontBold, size: 22, color: primaryColor },
+      // remove the Issued-on line from here
+    ];
 
-    doc
-      .font(fontRegular)
-      .fontSize(18)
-      .fillColor("#555555")
-      .text("AWARDED TO", 0, titleY + 90, { align: "center" });
-
-    // 6. Recipient Name
-    doc
-      .font(fontSemiBold)
-      .fontSize(32)
-      .fillColor(primaryColor)
-      .text(user.displayName, { align: "center", underline: false })
-      .moveDown(0.5);
-
-    // 7. Description & Degree
-    doc
-      .font(fontRegular)
-      .fontSize(16)
-      .fillColor("#333333")
-      .text("For successfully completing a free online course", {
-        align: "center",
-        lineGap: 6,
-      })
-      .moveDown(0.5);
-
-    doc
-      .font(fontBold)
-      .fontSize(22)
-      .fillColor(primaryColor)
-      .text(subCat.name, { align: "center" })
-      .moveDown(1);
-
-    // 8. Date
-    doc
-      .font(fontRegular)
-      .fontSize(14)
-      .fillColor("#555555")
-      .text(`Issued on: ${new Date().toLocaleDateString()}`, {
+    // measure total height of those lines
+    let totalHeight = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const { text, font, size } = lines[i];
+      doc.font(font).fontSize(size);
+      const h = doc.heightOfString(text, {
+        width: contentWidth,
         align: "center",
       });
+      totalHeight += h;
+      if (i < lines.length - 1) totalHeight += size * 0.5;
+    }
 
-    // 9. Signature block
-    const sigY = doc.page.height - 90;
-    doc.image(signaturePath, 80, sigY - 62, { width: 180 });
+    // vertical start
+    const startY = margins.top + (contentHeight - totalHeight) / 2;
 
+    // render each line
+    let cursorY = startY;
+    for (let i = 0; i < lines.length; i++) {
+      const { text, font, size, color } = lines[i];
+      doc
+        .font(font)
+        .fontSize(size)
+        .fillColor(color)
+        .text(text, margins.left, cursorY, {
+          width: contentWidth,
+          align: "center",
+        });
+      const h = doc.heightOfString(text, {
+        width: contentWidth,
+        align: "center",
+      });
+      cursorY += h + (i < lines.length - 1 ? size * 0.5 : 0);
+    }
+
+    // 4) Footer: signature (bottom-left) and issued date (bottom-right)
+    const footerY = H - margins.bottom - 60;
+
+    // 4a) Signature block
+    doc.image(signaturePath, margins.left + 30, footerY - 40, { width: 180 });
     doc
-      .moveTo(80, sigY + 10)
-      .lineTo(280, sigY + 10)
+      .moveTo(margins.left + 30, footerY + 22)
+      .lineTo(margins.left + 210, footerY + 22)
       .lineWidth(1)
       .strokeColor(primaryColor)
       .stroke();
-
     doc
       .font(fontRegular)
       .fontSize(12)
       .fillColor("#555555")
-      .text("PI Personal AI Educator", 80, sigY + 15, {
-        width: 200,
-        align: "left",
-      });
+      .text("Head of Personal Ai Educator", margins.left + 30, footerY + 25);
+
+    // 4b) Issued date (right-aligned)
+    doc
+      .font(fontRegular)
+      .fontSize(14)
+      .fillColor("#555555")
+      .text(
+        `Issued on: ${new Date().toLocaleDateString()}`,
+        margins.left,
+        footerY + 25,
+        {
+          width: contentWidth,
+          align: "right",
+        }
+      );
 
     doc.end();
 
@@ -373,7 +399,7 @@ No explanation—just JSON.`;
 
     return `/assets/certs/${filename}`;
   }
-
+  //==========================================================================================
   private async buildDegreePdf(
     userId: string,
     categoryId: string
@@ -384,6 +410,14 @@ No explanation—just JSON.`;
       where: { uuid: categoryId },
     });
     if (!category) throw new NotFoundException("Category not found");
+
+    const subCategories = await this.subCatRepo.find({
+      where: { category: { uuid: categoryId } },
+      relations: ["category"],
+      order: { name: "ASC" },
+    });
+
+    if (!subCategories) throw new NotFoundException("Sub Category not found");
 
     const dir = join(process.cwd(), "assets", "degrees");
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -401,26 +435,139 @@ No explanation—just JSON.`;
     const writeStream = createWriteStream(outPath);
     doc.pipe(writeStream);
 
+    const primary = "#352626";
+    const { width: W, height: H, margins } = doc.page;
+    const CW = W - margins.left - margins.right;
+
     doc
-      .fontSize(24)
-      .text("Degree Completion Certificate", { align: "center" })
-      .moveDown(2)
-      .fontSize(16)
-      .text(`This certifies that user ${user.displayName}`, { align: "center" })
-      .moveDown()
-      .text(`has successfully passed ALL subjects in:`, {
+      .lineWidth(3)
+      .strokeColor(primary)
+      .rect(
+        margins.left - 10,
+        margins.top - 10,
+        W - 2 * (margins.left - 10),
+        H - 2 * (margins.top - 10)
+      )
+      .stroke();
+
+    doc.image(uniLogoPath, margins.left, margins.top, { width: 70 });
+    doc.image(accentLogoPath, W - margins.right - 180, margins.top, {
+      width: 180,
+    });
+
+    const header = [
+      {
+        text: "PROFESSIONAL CERTIFICATE",
+        font: fontBold,
+        size: 42,
+        color: primary,
+      },
+      { text: "AWARDED TO", font: fontRegular, size: 16, color: "#555" },
+      { text: user.displayName, font: fontSemiBold, size: 28, color: primary },
+      {
+        text: "In recognition of successful completion of:",
+        font: fontRegular,
+        size: 14,
+        color: "#333",
+      },
+      { text: category.name, font: fontBold, size: 20, color: primary },
+      {
+        text: "Consisting of the following subjects:",
+        font: fontRegular,
+        size: 14,
+        color: "#333",
+      },
+    ];
+
+    const footerSig = {
+      text: "Head of Personal Ai Educator",
+      font: fontRegular,
+      size: 12,
+      color: "#555",
+    };
+    const footerDate = {
+      text: `Issued on: ${new Date().toLocaleDateString()}`,
+      font: fontRegular,
+      size: 12,
+      color: "#555",
+    };
+
+    function renderBlock(lines, startY, width) {
+      let y = startY;
+      for (let line of lines) {
+        doc
+          .font(line.font)
+          .fontSize(line.size)
+          .fillColor(line.color)
+          .text(line.text, margins.left, y, { width, align: "center" });
+        y +=
+          doc.heightOfString(line.text, { width, align: "center" }) +
+          line.size * 0.3;
+      }
+      return y;
+    }
+
+    let cursorY = renderBlock(header, margins.top + 60, CW) + 10;
+
+    const listTop = cursorY;
+    const listBottom = H - margins.bottom - 80;
+    const listH = listBottom - listTop;
+
+    doc.font(fontRegular).fontSize(16).fillColor("#333");
+    if (subCategories.length >= 5) {
+      const line = subCategories.join("  |  ");
+      doc.text(line, margins.left + 20, listTop, {
+        width: CW - 40,
         align: "center",
-      })
-      .moveDown()
-      .fontSize(18)
-      .text(`${category.name}`, { align: "center", underline: true })
-      .moveDown(3)
-      .fontSize(12)
-      .text(`Issued on ${new Date().toLocaleDateString()}`, {
+      });
+    } else {
+      const lineHeight = doc.heightOfString(subCategories[0].name, {
+        width: CW - 40,
         align: "center",
+      });
+      const spacing = lineHeight * 0.3;
+
+      let y = listTop;
+      subCategories.forEach((txt) => {
+        doc
+          .font(fontRegular)
+          .fontSize(16)
+          .fillColor("#333")
+          .text(txt.name, margins.left + 20, y, {
+            width: CW - 40,
+            align: "center",
+          });
+
+        y += lineHeight + spacing;
+      });
+    }
+
+    const footerY = H - margins.bottom - 60;
+
+    doc.image(signaturePath, margins.left + 20, footerY - 20, { width: 140 });
+    doc
+      .moveTo(margins.left + 20, footerY + 35)
+      .lineTo(margins.left + 160, footerY + 35)
+      .lineWidth(1)
+      .strokeColor(primary)
+      .stroke();
+    doc
+      .font(footerSig.font)
+      .fontSize(footerSig.size)
+      .fillColor(footerSig.color)
+      .text(footerSig.text, margins.left + 20, footerY + 40);
+
+    doc
+      .font(footerDate.font)
+      .fontSize(footerDate.size)
+      .fillColor(footerDate.color)
+      .text(footerDate.text, margins.left, footerY + 40, {
+        width: CW,
+        align: "right",
       });
 
     doc.end();
+
     await new Promise<void>((res, rej) => {
       writeStream.on("finish", () => res());
       writeStream.on("error", (err) => rej(err));
