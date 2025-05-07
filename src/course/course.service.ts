@@ -47,6 +47,7 @@ export class CourseService {
         `(c.title       ILIKE :q
          OR c.programType ILIKE :q
          OR c.duration    ILIKE :q
+         OR c.rating    ILIKE :q
          OR c.skills      ILIKE :q)`,
         { q: `%${search}%` }
       );

@@ -1,0 +1,6 @@
+{
+    "watch": ["dist/**/*.js", "dist/utilities/**/*"],
+    "ext": "js,json",
+    "exec": "node dist/main.js"
+  }
+  

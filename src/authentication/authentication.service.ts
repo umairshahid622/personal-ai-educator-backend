@@ -10,7 +10,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { JwtService } from "@nestjs/jwt";
-import { consoleError, consoleLog } from "src/utilities/logFunctions";
+import { consoleError, } from "src/utilities/logFunctions";
 import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,

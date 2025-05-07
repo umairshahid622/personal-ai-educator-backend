@@ -40,7 +40,6 @@ export class Courses {
   @Column({ name: "subCategoryId", type: "uuid", nullable: true })
   subCategoryId: string | null;
 
-  // —— Your other columns, now with explicit types ——
   @Column({ type: "varchar", length: 100, nullable: true })
   duration: string | null;
 

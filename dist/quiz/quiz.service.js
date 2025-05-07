@@ -23,9 +23,17 @@ const certificate_entity_1 = require("../certificates/entities/certificate.entit
 const degree_entity_1 = require("../degree/entities/degree.entity");
 const fs_1 = require("fs");
 const path_1 = require("path");
+const path = require("path");
 const PDFKit = require("pdfkit");
 const users_entity_1 = require("../users/entities/users.entity");
 const category_entity_1 = require("../categories/entities/category.entity");
+const assetsRoot = path.resolve(__dirname, "../utilities");
+const uniLogoPath = path.join(assetsRoot, "images", "bahria-university-logo.png");
+const accentLogoPath = path.join(assetsRoot, "images", "accentLogo.png");
+const signaturePath = path.join(assetsRoot, "images", "signature.png");
+const fontRegular = path.join(assetsRoot, "fonts", "Poppins-Regular.ttf");
+const fontSemiBold = path.join(assetsRoot, "fonts", "Poppins-SemiBold.ttf");
+const fontBold = path.join(assetsRoot, "fonts", "Poppins-Bold.ttf");
 let QuizService = class QuizService {
     constructor(quizRepo, subCatRepo, certRepo, degreeRepo, userRepo, catRepo) {
         this.quizRepo = quizRepo;
@@ -124,7 +132,6 @@ No explanation—just JSON.`;
         }
         if (current.question)
             questions.push(current);
-        console.log(questions);
         return questions;
     }
     async updateStatusByTitle(userId, dto) {
@@ -208,26 +215,78 @@ No explanation—just JSON.`;
         const timestamp = Date.now();
         const filename = `${timestamp}.pdf`;
         const outPath = (0, path_1.join)(dir, filename);
-        const doc = new PDFKit({ size: "A4", margin: 50 });
+        const doc = new PDFKit({
+            size: "A4",
+            layout: "landscape",
+            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+        });
+        const primaryColor = "#352626";
         const writeStream = (0, fs_1.createWriteStream)(outPath);
         doc.pipe(writeStream);
         doc
-            .fontSize(24)
-            .text("Certificate of Completion", { align: "center" })
-            .moveDown(2)
-            .fontSize(16)
-            .text(`This certifies that user ${user.displayName}`, { align: "center" })
-            .moveDown()
-            .text(`has successfully completed all quizzes in Subject:`, {
-            align: "center",
-        })
-            .moveDown()
+            .lineWidth(3)
+            .strokeColor(primaryColor)
+            .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
+            .stroke();
+        doc.image(uniLogoPath, 40, 40, { width: 70 });
+        const accentW = 220;
+        doc.image(accentLogoPath, doc.page.width - 40 - accentW, 40, {
+            width: accentW,
+        });
+        const titleY = 100;
+        doc
+            .font(fontBold)
+            .fontSize(52)
+            .fillColor(primaryColor)
+            .text("COURSE CERTIFICATE", 0, titleY, { align: "center" });
+        doc
+            .font(fontRegular)
             .fontSize(18)
-            .text(`${subCat.name}`, { align: "center", underline: true })
-            .moveDown(3)
-            .fontSize(12)
-            .text(`Issued on ${new Date().toLocaleDateString()}`, {
+            .fillColor("#555555")
+            .text("AWARDED TO", 0, titleY + 90, { align: "center" });
+        doc
+            .font(fontSemiBold)
+            .fontSize(32)
+            .fillColor(primaryColor)
+            .text(user.displayName, { align: "center", underline: false })
+            .moveDown(0.5);
+        doc
+            .font(fontRegular)
+            .fontSize(16)
+            .fillColor("#333333")
+            .text("For successfully completing a free online course", {
             align: "center",
+            lineGap: 6,
+        })
+            .moveDown(0.5);
+        doc
+            .font(fontBold)
+            .fontSize(22)
+            .fillColor(primaryColor)
+            .text(subCat.name, { align: "center" })
+            .moveDown(1);
+        doc
+            .font(fontRegular)
+            .fontSize(14)
+            .fillColor("#555555")
+            .text(`Issued on: ${new Date().toLocaleDateString()}`, {
+            align: "center",
+        });
+        const sigY = doc.page.height - 90;
+        doc.image(signaturePath, 80, sigY - 62, { width: 180 });
+        doc
+            .moveTo(80, sigY + 10)
+            .lineTo(280, sigY + 10)
+            .lineWidth(1)
+            .strokeColor(primaryColor)
+            .stroke();
+        doc
+            .font(fontRegular)
+            .fontSize(12)
+            .fillColor("#555555")
+            .text("PI Personal AI Educator", 80, sigY + 15, {
+            width: 200,
+            align: "left",
         });
         doc.end();
         await new Promise((res, rej) => {
@@ -251,7 +310,11 @@ No explanation—just JSON.`;
         const timestamp = Date.now();
         const filename = `${timestamp}.pdf`;
         const outPath = (0, path_1.join)(dir, filename);
-        const doc = new PDFKit({ size: "A4", margin: 50 });
+        const doc = new PDFKit({
+            size: "A4",
+            layout: "landscape",
+            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+        });
         const writeStream = (0, fs_1.createWriteStream)(outPath);
         doc.pipe(writeStream);
         doc
