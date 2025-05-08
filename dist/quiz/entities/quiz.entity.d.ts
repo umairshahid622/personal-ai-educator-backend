@@ -8,7 +8,7 @@ export declare class Quiz {
     subCategoryId: string;
     items: {
         title: string;
-        status: "locked" | "unlocked" | "passed" | "fail";
+        status: "locked" | "unlocked" | "passed" | "failed";
     }[];
     isPassed: boolean;
     createdAt: Date;

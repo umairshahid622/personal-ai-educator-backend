@@ -1,6 +1,6 @@
 declare class QuizItemDto {
     title: string;
-    status: "locked" | "unlocked" | "passed" | "fail";
+    status: "locked" | "unlocked" | "passed" | "failed";
 }
 export declare class CreateQuizDto {
     subcategoryId: string;

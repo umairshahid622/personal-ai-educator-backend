@@ -14,7 +14,7 @@ class QuizItemDto {
     | "locked"
     | "unlocked"
     | "passed"
-    | "fail";
+    | "failed";
 }
 
 export class CreateQuizDto {

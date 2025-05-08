@@ -7,4 +7,15 @@ export declare class UpdateQuizItemDto {
     title: string;
     marks: number;
 }
+export declare class UpdateQuizItemResponse {
+    message: string;
+    status: "passed" | "failed";
+    title: string;
+    totalQuestions: number;
+    passingMarks: number;
+    obtainedMarks: number;
+    unlockMessage?: string;
+    certificateMessage?: string;
+    degreeMessage?: string;
+}
 export {};

@@ -69,7 +69,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], QuizController.prototype, "updateItemStatus", null);
 __decorate([
-    (0, common_1.Get)('getUserBundle'),
+    (0, common_1.Get)("getUserBundle"),
     __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Request]),

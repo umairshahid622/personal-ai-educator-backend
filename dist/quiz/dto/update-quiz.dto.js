@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateQuizItemDto = exports.UpdateQuizDto = void 0;
+exports.UpdateQuizItemResponse = exports.UpdateQuizItemDto = exports.UpdateQuizDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const create_quiz_dto_1 = require("./create-quiz.dto");
 const class_validator_1 = require("class-validator");
@@ -32,4 +32,7 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], UpdateQuizItemDto.prototype, "marks", void 0);
+class UpdateQuizItemResponse {
+}
+exports.UpdateQuizItemResponse = UpdateQuizItemResponse;
 //# sourceMappingURL=update-quiz.dto.js.map

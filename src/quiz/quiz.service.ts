@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { CreateQuizDto } from "./dto/create-quiz.dto";
-import { UpdateQuizDto, UpdateQuizItemDto } from "./dto/update-quiz.dto";
+import {
+  UpdateQuizDto,
+  UpdateQuizItemDto,
+  UpdateQuizItemResponse,
+} from "./dto/update-quiz.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Quiz } from "./entities/quiz.entity";
@@ -17,7 +21,6 @@ import { Categories } from "src/categories/entities/category.entity";
 
 const assetsRoot = path.resolve(__dirname, "../utilities");
 
-// images
 const uniLogoPath = path.join(
   assetsRoot,
   "images",
@@ -26,7 +29,6 @@ const uniLogoPath = path.join(
 const accentLogoPath = path.join(assetsRoot, "images", "blackLogo.png");
 const signaturePath = path.join(assetsRoot, "images", "signature.png");
 
-// fonts
 const fontRegular = path.join(assetsRoot, "fonts", "Poppins-Regular.ttf");
 const fontSemiBold = path.join(assetsRoot, "fonts", "Poppins-SemiBold.ttf");
 const fontBold = path.join(assetsRoot, "fonts", "Poppins-Bold.ttf");
@@ -70,13 +72,11 @@ export class QuizService {
     userId: string,
     subCategoryId: string
   ): Promise<Quiz> {
-    // 1) existing?
     let quiz = await this.quizRepo.findOne({
       where: { userId, subCategoryId },
     });
     if (quiz) return quiz;
 
-    // 2) otherwise load the SubCategory so we know its name
     const subCat = await this.subCatRepo.findOne({
       where: { id: subCategoryId },
     });
@@ -98,7 +98,6 @@ No explanation—just JSON.`;
     const raw = aiResp.choices?.[0]?.message?.content ?? "";
     const items = this.parseJsonArray(raw);
 
-    // 3) save
     quiz = this.quizRepo.create({
       userId,
       subCategoryId,
@@ -113,7 +112,6 @@ No explanation—just JSON.`;
     subCategoryId: string,
     title: string
   ): Promise<Mcq[]> {
-    // (Optionally, verify that a QuizBundle exists for this user/subCategory/title)
     const prompt = `
     You are an expert question-writer.  
     Based on the topic: "${title}", generate exactly 10 multiple-choice questions.  
@@ -143,7 +141,6 @@ No explanation—just JSON.`;
   }
 
   private parseMcq(raw: string): Mcq[] {
-    // split on “Q” lines, basic parsing—adjust to your format
     const lines = raw
       .split(/\r?\n/)
       .map((l) => l.trim())
@@ -168,39 +165,57 @@ No explanation—just JSON.`;
   async updateStatusByTitle(
     userId: string,
     dto: UpdateQuizItemDto
-  ): Promise<any> {
+  ): Promise<UpdateQuizItemResponse> {
     const { subCategoryId, title, marks } = dto;
     const quiz = await this.quizRepo.findOne({
       where: { userId, subCategoryId },
+      relations: ["subCategory", "user"],
     });
     if (!quiz) throw new NotFoundException("Quiz bundle not found");
 
     const idx = quiz.items.findIndex((i) => i.title === title);
     if (idx < 0) throw new NotFoundException("Quiz title not found");
 
-    const passed = marks >= 7;
-    quiz.items[idx].status = passed ? "passed" : "fail";
+    const totalQuestions = 10;
+    const passingMarks = Math.ceil(totalQuestions * 0.7);
+    const passed = marks >= passingMarks;
 
-    // unlock next quiz
-    if (
-      passed &&
-      idx + 1 < quiz.items.length &&
-      quiz.items[idx + 1].status === "locked"
-    ) {
+    // mark this one passed/failed
+    quiz.items[idx].status = passed ? "passed" : "failed";
+
+    let unlockMessage: string | undefined;
+    // unlock the next one if passed
+    if (passed && quiz.items[idx + 1]?.status === "locked") {
       quiz.items[idx + 1].status = "unlocked";
+      unlockMessage = `Quiz "${quiz.items[idx + 1].title}" has been unlocked.`;
     }
 
+    // check if the whole bundle is now passed
     quiz.isPassed = quiz.items.every((it) => it.status === "passed");
     await this.quizRepo.save(quiz);
 
+    // build base response
+    const response: UpdateQuizItemResponse = {
+      message: passed
+        ? `Quiz passed (${marks}/${totalQuestions}).`
+        : `Quiz failed (${marks}/${totalQuestions}), need ${passingMarks} marks to pass.`,
+      status: passed ? "passed" : "failed",
+      title,
+      totalQuestions,
+      passingMarks,
+      obtainedMarks: marks,
+      ...(unlockMessage ? { unlockMessage } : {}),
+    };
+
+    // if bundle just completed, issue certificates/degrees…
     if (passed && quiz.isPassed) {
-      // ─── Issue sub-category certificate ───
       const subCat = await this.subCatRepo.findOne({
         where: { id: subCategoryId },
         relations: ["category", "category.subCategories"],
       });
       if (!subCat) throw new NotFoundException("SubCategory not found");
 
+      // sub-category cert
       const certExists = await this.certRepo.findOne({
         where: { userId, subCategoryId },
       });
@@ -212,9 +227,10 @@ No explanation—just JSON.`;
           pdfPath,
           originalName: subCat.name,
         });
+        response.certificateMessage = `Certificate issued for sub-category “${subCat.name}”.`;
       }
 
-      // ─── If all sub-categories passed, issue degree certificate ───
+      // degree cert
       const allPassed = await Promise.all(
         subCat.category.subCategories.map(async (sc) => {
           const b = await this.quizRepo.findOne({
@@ -237,16 +253,15 @@ No explanation—just JSON.`;
             pdfPath,
             originalName: subCat.category.name,
           });
+          response.degreeMessage = `Degree certificate issued for “${subCat.category.name}.”`;
         }
       }
     }
 
-    return {
-      message: passed ? "Quiz has been passed." : "Quiz has been failed.",
-      status: passed ? "passed" : "fail",
-      title,
-    };
+    return response;
   }
+
+  //================================================================================
 
   private async buildSubCategoryPdf(
     userId: string,
@@ -280,7 +295,6 @@ No explanation—just JSON.`;
     const contentHeight = H - margins.top - margins.bottom;
     const primaryColor = "#352626";
 
-    // 1) Draw outer border
     doc
       .lineWidth(3)
       .strokeColor(primaryColor)
@@ -292,13 +306,11 @@ No explanation—just JSON.`;
       )
       .stroke();
 
-    // 2) Logos
     doc.image(uniLogoPath, margins.left, margins.top, { width: 70 });
     doc.image(accentLogoPath, W - margins.right - 220, margins.top, {
       width: 220,
     });
 
-    // 3) Main centered block (minus the date)
     const lines = [
       {
         text: "COURSE CERTIFICATE",
@@ -320,10 +332,8 @@ No explanation—just JSON.`;
         color: "#333333",
       },
       { text: subCat.name, font: fontBold, size: 22, color: primaryColor },
-      // remove the Issued-on line from here
     ];
 
-    // measure total height of those lines
     let totalHeight = 0;
     for (let i = 0; i < lines.length; i++) {
       const { text, font, size } = lines[i];
@@ -336,10 +346,8 @@ No explanation—just JSON.`;
       if (i < lines.length - 1) totalHeight += size * 0.5;
     }
 
-    // vertical start
     const startY = margins.top + (contentHeight - totalHeight) / 2;
 
-    // render each line
     let cursorY = startY;
     for (let i = 0; i < lines.length; i++) {
       const { text, font, size, color } = lines[i];
@@ -358,10 +366,8 @@ No explanation—just JSON.`;
       cursorY += h + (i < lines.length - 1 ? size * 0.5 : 0);
     }
 
-    // 4) Footer: signature (bottom-left) and issued date (bottom-right)
     const footerY = H - margins.bottom - 60;
 
-    // 4a) Signature block
     doc.image(signaturePath, margins.left + 30, footerY - 40, { width: 180 });
     doc
       .moveTo(margins.left + 30, footerY + 22)
@@ -375,7 +381,6 @@ No explanation—just JSON.`;
       .fillColor("#555555")
       .text("Head of Personal Ai Educator", margins.left + 30, footerY + 25);
 
-    // 4b) Issued date (right-aligned)
     doc
       .font(fontRegular)
       .fontSize(14)

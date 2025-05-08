@@ -50,16 +50,14 @@ export class QuizController {
   async updateItemStatus(
     @Req() req: Request,
     @Body() dto: UpdateQuizItemDto
-  ): Promise<UpdateQuizItemDto> {
+  ): Promise<any> {
     const userId = req["user"]["userId"];
     return this.quizService.updateStatusByTitle(userId, dto);
   }
 
-
-  @Get('getUserBundle')
+  @Get("getUserBundle")
   async getUserBundles(@Req() req: Request) {
     const userId = req["user"]["userId"];
     return this.quizService.getUserBundles(userId);
   }
-  
 }

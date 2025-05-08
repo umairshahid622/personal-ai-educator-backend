@@ -1,4 +1,4 @@
-import { UpdateQuizItemDto } from "./dto/update-quiz.dto";
+import { UpdateQuizItemDto, UpdateQuizItemResponse } from "./dto/update-quiz.dto";
 import { Repository } from "typeorm";
 import { Quiz } from "./entities/quiz.entity";
 import { SubCategory } from "src/subcategory/entities/subcategory.entity";
@@ -24,7 +24,7 @@ export declare class QuizService {
     getOrCreateForUser(userId: string, subCategoryId: string): Promise<Quiz>;
     generateExamByTitle(userId: string, subCategoryId: string, title: string): Promise<Mcq[]>;
     private parseMcq;
-    updateStatusByTitle(userId: string, dto: UpdateQuizItemDto): Promise<any>;
+    updateStatusByTitle(userId: string, dto: UpdateQuizItemDto): Promise<UpdateQuizItemResponse>;
     private buildSubCategoryPdf;
     private buildDegreePdf;
     private parseJsonArray;

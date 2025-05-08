@@ -32,7 +32,7 @@ export class Quiz {
   subCategoryId: string;
 
   @Column({ type: "jsonb" })
-  items: { title: string; status: "locked" | "unlocked" | "passed" | "fail" }[];
+  items: { title: string; status: "locked" | "unlocked" | "passed" | "failed" }[];
 
   @Column({ type: "boolean", default: false })
   isPassed: boolean;

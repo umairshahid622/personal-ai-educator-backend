@@ -15,3 +15,15 @@ export class UpdateQuizItemDto {
   @Min(0)
   marks: number;
 }
+
+export class UpdateQuizItemResponse {
+  message: string;
+  status: "passed" | "failed";
+  title: string;
+  totalQuestions: number;
+  passingMarks: number;
+  obtainedMarks: number;
+  unlockMessage?: string;
+  certificateMessage?: string;
+  degreeMessage?: string;
+}

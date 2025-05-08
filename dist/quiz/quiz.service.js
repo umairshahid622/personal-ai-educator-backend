@@ -138,21 +138,35 @@ No explanation—just JSON.`;
         const { subCategoryId, title, marks } = dto;
         const quiz = await this.quizRepo.findOne({
             where: { userId, subCategoryId },
+            relations: ["subCategory", "user"],
         });
         if (!quiz)
             throw new common_1.NotFoundException("Quiz bundle not found");
         const idx = quiz.items.findIndex((i) => i.title === title);
         if (idx < 0)
             throw new common_1.NotFoundException("Quiz title not found");
-        const passed = marks >= 7;
-        quiz.items[idx].status = passed ? "passed" : "fail";
-        if (passed &&
-            idx + 1 < quiz.items.length &&
-            quiz.items[idx + 1].status === "locked") {
+        const totalQuestions = 10;
+        const passingMarks = Math.ceil(totalQuestions * 0.7);
+        const passed = marks >= passingMarks;
+        quiz.items[idx].status = passed ? "passed" : "failed";
+        let unlockMessage;
+        if (passed && quiz.items[idx + 1]?.status === "locked") {
             quiz.items[idx + 1].status = "unlocked";
+            unlockMessage = `Quiz "${quiz.items[idx + 1].title}" has been unlocked.`;
         }
         quiz.isPassed = quiz.items.every((it) => it.status === "passed");
         await this.quizRepo.save(quiz);
+        const response = {
+            message: passed
+                ? `Quiz passed (${marks}/${totalQuestions}).`
+                : `Quiz failed (${marks}/${totalQuestions}), need ${passingMarks} marks to pass.`,
+            status: passed ? "passed" : "failed",
+            title,
+            totalQuestions,
+            passingMarks,
+            obtainedMarks: marks,
+            ...(unlockMessage ? { unlockMessage } : {}),
+        };
         if (passed && quiz.isPassed) {
             const subCat = await this.subCatRepo.findOne({
                 where: { id: subCategoryId },
@@ -171,6 +185,7 @@ No explanation—just JSON.`;
                     pdfPath,
                     originalName: subCat.name,
                 });
+                response.certificateMessage = `Certificate issued for sub-category “${subCat.name}”.`;
             }
             const allPassed = await Promise.all(subCat.category.subCategories.map(async (sc) => {
                 const b = await this.quizRepo.findOne({
@@ -191,14 +206,11 @@ No explanation—just JSON.`;
                         pdfPath,
                         originalName: subCat.category.name,
                     });
+                    response.degreeMessage = `Degree certificate issued for “${subCat.category.name}.”`;
                 }
             }
         }
-        return {
-            message: passed ? "Quiz has been passed." : "Quiz has been failed.",
-            status: passed ? "passed" : "fail",
-            title,
-        };
+        return response;
     }
     async buildSubCategoryPdf(userId, subCategoryId) {
         const user = await this.userRepo.findOne({ where: { uuid: userId } });
