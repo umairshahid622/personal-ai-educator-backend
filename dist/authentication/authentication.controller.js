@@ -26,14 +26,11 @@ let AuthenticationController = class AuthenticationController {
     login(loginAuthenticationDto) {
         return this.authenticationService.logIn(loginAuthenticationDto);
     }
-    async forgotPassword(email, newPassword, confirmPassword) {
-        if (!email || !newPassword || !confirmPassword) {
-            throw new common_1.BadRequestException("Email, New Password and Confirm Password are required");
+    async verifyEmail(token) {
+        if (!token) {
+            throw new common_1.BadRequestException('Verification token is required');
         }
-        if (newPassword !== confirmPassword) {
-            throw new common_1.BadRequestException("New Password and Confirm Password do not match");
-        }
-        return this.authenticationService.forgotPassword(email, newPassword);
+        return this.authenticationService.verifyEmailToken(token);
     }
 };
 exports.AuthenticationController = AuthenticationController;
@@ -53,14 +50,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], AuthenticationController.prototype, "login", null);
 __decorate([
-    (0, common_1.Post)("forgot-password"),
-    __param(0, (0, common_1.Body)("email")),
-    __param(1, (0, common_1.Body)("newPassword")),
-    __param(2, (0, common_1.Body)("confirmPassword")),
+    (0, common_1.Get)('verify'),
+    __param(0, (0, common_1.Query)('token')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
-], AuthenticationController.prototype, "forgotPassword", null);
+], AuthenticationController.prototype, "verifyEmail", null);
 exports.AuthenticationController = AuthenticationController = __decorate([
     (0, common_1.Controller)("authentication"),
     __metadata("design:paramtypes", [authentication_service_1.AuthenticationService])

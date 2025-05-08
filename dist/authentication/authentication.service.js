@@ -18,81 +18,100 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bcrypt = require("bcrypt");
 const jwt_1 = require("@nestjs/jwt");
-const logFunctions_1 = require("../utilities/logFunctions");
 const users_entity_1 = require("../users/entities/users.entity");
+const uuid_1 = require("uuid");
+const mailer_1 = require("@nestjs-modules/mailer");
+const config_1 = require("@nestjs/config");
 let AuthenticationService = class AuthenticationService {
-    constructor(userRepository, dataSource, jwtService) {
+    constructor(userRepository, dataSource, jwtService, mailerService, config) {
         this.userRepository = userRepository;
         this.dataSource = dataSource;
         this.jwtService = jwtService;
+        this.mailerService = mailerService;
+        this.config = config;
     }
-    async create(createAuthenticationDto) {
-        if (!createAuthenticationDto?.email ||
-            !createAuthenticationDto?.password ||
-            !createAuthenticationDto.displayName ||
-            !createAuthenticationDto.dateOfBirth) {
+    async create(dto) {
+        const { email, password, displayName, dateOfBirth } = dto;
+        if (!email || !password || !displayName || !dateOfBirth) {
             throw new common_1.BadRequestException("Email, password, display name and date of birth are required");
         }
-        const querryRunner = this.dataSource.createQueryRunner();
-        await querryRunner.connect();
-        await querryRunner.startTransaction();
-        try {
-            const hashedPassword = await bcrypt.hash(createAuthenticationDto.password, 10);
-            const payLoad = this.userRepository.create({
-                email: createAuthenticationDto.email,
-                displayName: createAuthenticationDto.displayName,
-                password: hashedPassword,
-                dateOfBirth: createAuthenticationDto.dateOfBirth,
-            });
-            const user = await this.userRepository.save(payLoad);
-            const userToken = this.jwtService.sign({ userId: user.uuid });
-            await querryRunner.commitTransaction();
-            return {
-                accessToken: userToken,
-                message: "account created sucessfully!",
-            };
-        }
-        catch (error) {
-            await querryRunner.rollbackTransaction();
-            (0, logFunctions_1.consoleError)(error);
-            if (error.code === "23505") {
+        const existing = await this.userRepository.findOne({
+            where: { email },
+        });
+        if (existing) {
+            if (existing.emailVerified) {
                 throw new common_1.ConflictException("Email already exists");
             }
-            throw new common_1.InternalServerErrorException("Failed to create user");
+            if (existing.emailTokenExpires > new Date()) {
+                await this.sendVerificationEmail(existing);
+                return {
+                    message: "Verification email resent. Please check your inbox (and spam).",
+                };
+            }
+            await this.userRepository.remove(existing);
         }
-        finally {
-            await querryRunner.release();
-        }
+        const hashed = await bcrypt.hash(password, 10);
+        const user = this.userRepository.create({
+            email,
+            displayName,
+            password: hashed,
+            dateOfBirth,
+            emailVerificationToken: (0, uuid_1.v4)(),
+            emailTokenExpires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+            emailVerified: false,
+        });
+        await this.userRepository.save(user);
+        await this.sendVerificationEmail(user);
+        return {
+            message: `Account created. A verification link has been sent to ${email}.`,
+        };
     }
-    async logIn(loginAuthenticationDto) {
-        try {
-            if (!loginAuthenticationDto?.email || !loginAuthenticationDto?.password) {
-                throw new common_1.BadRequestException("Email and password are required");
-            }
-            const user = await this.userRepository.findOne({
-                where: { email: loginAuthenticationDto.email },
-                select: ["uuid", "password"],
-            });
-            if (!user) {
-                throw new common_1.UnauthorizedException("Invalid credentials");
-            }
-            const isPasswordValid = await bcrypt.compare(loginAuthenticationDto.password, user.password);
-            if (!isPasswordValid) {
-                throw new common_1.UnauthorizedException("Invalid credentials");
-            }
-            const payload = { userId: user.uuid };
-            return {
-                accessToken: this.jwtService.sign(payload),
-                message: "logged in sucessfully!",
-            };
+    async logIn(loginDto) {
+        const { email, password } = loginDto;
+        if (!email || !password) {
+            throw new common_1.BadRequestException("Email and password are required");
         }
-        catch (error) {
-            (0, logFunctions_1.consoleError)(error);
-            if (error instanceof common_1.UnauthorizedException) {
-                throw error;
-            }
-            throw new common_1.InternalServerErrorException("Login failed");
+        const user = await this.userRepository.findOne({
+            where: { email },
+            select: ["uuid", "password", "emailVerified"],
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException("Invalid credentials");
         }
+        if (!user.emailVerified) {
+            throw new common_1.UnauthorizedException("Email not verified. Please check your inbox for the verification link.");
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            throw new common_1.UnauthorizedException("Invalid credentials");
+        }
+        const payload = { userId: user.uuid };
+        const accessToken = this.jwtService.sign(payload);
+        return {
+            accessToken,
+            message: "Logged in successfully!",
+        };
+    }
+    async verifyEmailToken(token) {
+        const user = await this.userRepository.findOne({
+            where: { emailVerificationToken: token },
+        });
+        if (!user) {
+            throw new common_1.BadRequestException("Invalid verification token");
+        }
+        if (!user.emailTokenExpires || user.emailTokenExpires < new Date()) {
+            throw new common_1.BadRequestException("Token has expired");
+        }
+        user.emailVerified = true;
+        user.emailVerificationToken = null;
+        user.emailTokenExpires = null;
+        await this.userRepository.save(user);
+        const payload = { userId: user.uuid };
+        const accessToken = this.jwtService.sign(payload);
+        return {
+            message: "Email successfully verified!",
+            accessToken: accessToken,
+        };
     }
     async forgotPassword(email, newPassword) {
         const user = await this.userRepository.findOne({ where: { email } });
@@ -104,6 +123,20 @@ let AuthenticationService = class AuthenticationService {
         await this.userRepository.save(user);
         return { message: "Password updated successfully" };
     }
+    async sendVerificationEmail(user) {
+        const frontendUrl = this.config.get("FRONTEND_URL");
+        const verifyUrl = `${frontendUrl}/auth/verify?token=${user.emailVerificationToken}`;
+        await this.mailerService.sendMail({
+            to: user.email,
+            subject: "Confirm your email",
+            template: "verify_email",
+            context: {
+                name: user.displayName,
+                verifyUrl,
+                expires: user.emailTokenExpires,
+            },
+        });
+    }
 };
 exports.AuthenticationService = AuthenticationService;
 exports.AuthenticationService = AuthenticationService = __decorate([
@@ -111,6 +144,8 @@ exports.AuthenticationService = AuthenticationService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(users_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.DataSource,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        mailer_1.MailerService,
+        config_1.ConfigService])
 ], AuthenticationService);
 //# sourceMappingURL=authentication.service.js.map

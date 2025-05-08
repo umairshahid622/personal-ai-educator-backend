@@ -11,6 +11,9 @@ export declare class User {
     certificates: Certificate[];
     degrees: Degree[];
     emailVerified: boolean;
+    emailVerificationToken: string | null;
+    emailTokenExpires: Date | null;
+    generateId(): void;
     createdAt: Date;
     updatedAt: Date;
 }

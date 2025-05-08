@@ -3,6 +3,7 @@ import { Certificate } from "src/certificates/entities/certificate.entity";
 import { Degree } from "src/degree/entities/degree.entity";
 import { Quiz } from "src/quiz/entities/quiz.entity";
 import {
+  BeforeInsert,
   Column,
   CreateDateColumn,
   Entity,
@@ -10,6 +11,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+
+import * as uuid from "uuid";
 
 @Entity()
 export class User {
@@ -46,7 +49,17 @@ export class User {
 
   @Column({ default: false })
   emailVerified: boolean;
-  
+
+  @Column({type:'text' ,nullable: true })
+  emailVerificationToken: string | null;
+
+  @Column({ type: "timestamp", nullable: true })
+  emailTokenExpires: Date | null;
+
+  @BeforeInsert()
+  generateId() {
+    this.uuid = uuid.v4();
+  }
 
   @CreateDateColumn()
   createdAt: Date;

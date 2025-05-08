@@ -2,20 +2,28 @@ import { DataSource, Repository } from "typeorm";
 import { JwtService } from "@nestjs/jwt";
 import { CreateAuthenticationDto, LoginAuthenticationDto } from "src/users/dto/create-users.dto";
 import { User } from "src/users/entities/users.entity";
+import { MailerService } from "@nestjs-modules/mailer";
+import { ConfigService } from "@nestjs/config";
 export declare class AuthenticationService {
     private readonly userRepository;
     private readonly dataSource;
     private readonly jwtService;
-    constructor(userRepository: Repository<User>, dataSource: DataSource, jwtService: JwtService);
-    create(createAuthenticationDto: CreateAuthenticationDto): Promise<{
+    private readonly mailerService;
+    private readonly config;
+    constructor(userRepository: Repository<User>, dataSource: DataSource, jwtService: JwtService, mailerService: MailerService, config: ConfigService);
+    create(dto: CreateAuthenticationDto): Promise<{
+        message: string;
+    }>;
+    logIn(loginDto: LoginAuthenticationDto): Promise<{
         accessToken: string;
         message: string;
     }>;
-    logIn(loginAuthenticationDto: LoginAuthenticationDto): Promise<{
-        accessToken: string;
+    verifyEmailToken(token: string): Promise<{
         message: string;
+        accessToken?: string;
     }>;
     forgotPassword(email: string, newPassword: string): Promise<{
         message: string;
     }>;
+    private sendVerificationEmail;
 }

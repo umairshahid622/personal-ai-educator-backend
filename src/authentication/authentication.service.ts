@@ -10,13 +10,16 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { JwtService } from "@nestjs/jwt";
-import { consoleError, } from "src/utilities/logFunctions";
+import { consoleError } from "src/utilities/logFunctions";
 import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,
 } from "src/users/dto/create-users.dto";
 import { UpdateAuthenticationDto } from "src/users/dto/update-users.dto";
 import { User } from "src/users/entities/users.entity";
+import { v4 as uuidv4 } from "uuid";
+import { MailerService } from "@nestjs-modules/mailer";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthenticationService {
@@ -24,103 +27,128 @@ export class AuthenticationService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly dataSource: DataSource,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private readonly config: ConfigService
   ) {}
 
-  async create(
-    createAuthenticationDto: CreateAuthenticationDto
-  ): Promise<{ accessToken: string; message: string }> {
-    if (
-      !createAuthenticationDto?.email ||
-      !createAuthenticationDto?.password ||
-      !createAuthenticationDto.displayName ||
-      !createAuthenticationDto.dateOfBirth
-    ) {
+  async create(dto: CreateAuthenticationDto): Promise<{ message: string }> {
+    const { email, password, displayName, dateOfBirth } = dto;
+    if (!email || !password || !displayName || !dateOfBirth) {
       throw new BadRequestException(
         "Email, password, display name and date of birth are required"
       );
     }
-    const querryRunner = this.dataSource.createQueryRunner();
-    await querryRunner.connect();
-    await querryRunner.startTransaction();
 
-    try {
-      const hashedPassword = await bcrypt.hash(
-        createAuthenticationDto.password,
-        10
-      );
+    const existing = await this.userRepository.findOne({
+      where: { email },
+    });
 
-      const payLoad: User = this.userRepository.create({
-        email: createAuthenticationDto.email,
-        displayName: createAuthenticationDto.displayName,
-        password: hashedPassword,
-        dateOfBirth: createAuthenticationDto.dateOfBirth,
-      });
-
-      const user: User = await this.userRepository.save(payLoad);
-
-      const userToken = this.jwtService.sign({ userId: user.uuid });
-      await querryRunner.commitTransaction();
-
-      return {
-        accessToken: userToken,
-        message: "account created sucessfully!",
-      };
-    } catch (error) {
-      await querryRunner.rollbackTransaction();
-
-      consoleError(error);
-
-      if (error.code === "23505") {
+    if (existing) {
+      if (existing.emailVerified) {
         throw new ConflictException("Email already exists");
       }
-      throw new InternalServerErrorException("Failed to create user");
-    } finally {
-      await querryRunner.release();
+
+      if (existing.emailTokenExpires! > new Date()) {
+        await this.sendVerificationEmail(existing);
+        return {
+          message:
+            "Verification email resent. Please check your inbox (and spam).",
+        };
+      }
+
+      await this.userRepository.remove(existing);
     }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const user = this.userRepository.create({
+      email,
+      displayName,
+      password: hashed,
+      dateOfBirth,
+      emailVerificationToken: uuidv4(),
+      emailTokenExpires: new Date(Date.now() + 1000 * 60 * 60 * 24), // 24h
+      emailVerified: false,
+    });
+
+    await this.userRepository.save(user);
+
+    await this.sendVerificationEmail(user);
+
+    return {
+      message: `Account created. A verification link has been sent to ${email}.`,
+    };
   }
 
   async logIn(
-    loginAuthenticationDto: LoginAuthenticationDto
+    loginDto: LoginAuthenticationDto
   ): Promise<{ accessToken: string; message: string }> {
-    try {
-      if (!loginAuthenticationDto?.email || !loginAuthenticationDto?.password) {
-        throw new BadRequestException("Email and password are required");
-      }
-
-      const user: User | null = await this.userRepository.findOne({
-        where: { email: loginAuthenticationDto.email },
-        select: ["uuid", "password"],
-      });
-
-      if (!user) {
-        throw new UnauthorizedException("Invalid credentials");
-      }
-
-      const isPasswordValid: boolean = await bcrypt.compare(
-        loginAuthenticationDto.password,
-        user.password
-      );
-
-      if (!isPasswordValid) {
-        throw new UnauthorizedException("Invalid credentials");
-      }
-
-      const payload = { userId: user.uuid };
-
-      return {
-        accessToken: this.jwtService.sign(payload),
-        message: "logged in sucessfully!",
-      };
-    } catch (error) {
-      consoleError(error);
-
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new InternalServerErrorException("Login failed");
+    const { email, password } = loginDto;
+  
+    if (!email || !password) {
+      throw new BadRequestException("Email and password are required");
     }
+  
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ["uuid", "password", "emailVerified"],
+    });
+  
+    if (!user) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+  
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        "Email not verified. Please check your inbox for the verification link."
+      );
+    }
+  
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException("Invalid credentials");
+    }
+  
+    const payload = { userId: user.uuid };
+    const accessToken = this.jwtService.sign(payload);
+  
+    return {
+      accessToken,
+      message: "Logged in successfully!",
+    };
   }
+  
+
+  async verifyEmailToken(
+    token: string
+  ): Promise<{ message: string; accessToken?: string }> {
+    const user = await this.userRepository.findOne({
+      where: { emailVerificationToken: token },
+    });
+
+    if (!user) {
+      throw new BadRequestException("Invalid verification token");
+    }
+    if (!user.emailTokenExpires || user.emailTokenExpires < new Date()) {
+      throw new BadRequestException("Token has expired");
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationToken = null;
+    user.emailTokenExpires = null;
+    await this.userRepository.save(user);
+
+    // Optionally sign and return a JWT so the user is automatically logged in:
+    const payload = { userId: user.uuid };
+    const accessToken = this.jwtService.sign(payload);
+
+    return {
+      message: "Email successfully verified!",
+      accessToken: accessToken,
+    };
+  }
+
   async forgotPassword(
     email: string,
     newPassword: string
@@ -137,5 +165,20 @@ export class AuthenticationService {
     await this.userRepository.save(user);
 
     return { message: "Password updated successfully" };
+  }
+
+  private async sendVerificationEmail(user: User) {
+    const frontendUrl = this.config.get<string>("FRONTEND_URL");
+    const verifyUrl = `${frontendUrl}/auth/verify?token=${user.emailVerificationToken}`;
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: "Confirm your email",
+      template: "verify_email",
+      context: {
+        name: user.displayName,
+        verifyUrl,
+        expires: user.emailTokenExpires,
+      },
+    });
   }
 }

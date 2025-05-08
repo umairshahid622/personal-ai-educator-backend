@@ -4,14 +4,14 @@ export declare class AuthenticationController {
     private readonly authenticationService;
     constructor(authenticationService: AuthenticationService);
     create(createAuthenticationDto: CreateAuthenticationDto): Promise<{
-        accessToken: string;
         message: string;
     }>;
     login(loginAuthenticationDto: LoginAuthenticationDto): Promise<{
         accessToken: string;
         message: string;
     }>;
-    forgotPassword(email: string, newPassword: string, confirmPassword: string): Promise<{
+    verifyEmail(token: string): Promise<{
         message: string;
+        accessToken?: string;
     }>;
 }

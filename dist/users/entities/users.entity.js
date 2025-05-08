@@ -15,7 +15,11 @@ const certificate_entity_1 = require("../../certificates/entities/certificate.en
 const degree_entity_1 = require("../../degree/entities/degree.entity");
 const quiz_entity_1 = require("../../quiz/entities/quiz.entity");
 const typeorm_1 = require("typeorm");
+const uuid = require("uuid");
 let User = class User {
+    generateId() {
+        this.uuid = uuid.v4();
+    }
 };
 exports.User = User;
 __decorate([
@@ -61,6 +65,20 @@ __decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], User.prototype, "emailVerified", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "emailVerificationToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "timestamp", nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "emailTokenExpires", void 0);
+__decorate([
+    (0, typeorm_1.BeforeInsert)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], User.prototype, "generateId", null);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

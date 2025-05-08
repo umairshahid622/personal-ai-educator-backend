@@ -9,6 +9,7 @@ import {
   UsePipes,
   ValidationPipe,
   BadRequestException,
+  Query,
 } from "@nestjs/common";
 import { AuthenticationService } from "./authentication.service";
 import {
@@ -32,42 +33,14 @@ export class AuthenticationController {
     return this.authenticationService.logIn(loginAuthenticationDto);
   }
 
-  @Post("forgot-password")
-  async forgotPassword(
-    @Body("email") email: string,
-    @Body("newPassword") newPassword: string,
-    @Body("confirmPassword") confirmPassword: string
-  ) {
-    if (!email || !newPassword || !confirmPassword) {
-      throw new BadRequestException(
-        "Email, New Password and Confirm Password are required"
-      );
+  @Get('verify')
+  async verifyEmail(
+    @Query('token') token: string,
+  ): Promise<{ message: string; accessToken?: string }> {
+    if (!token) {
+      throw new BadRequestException('Verification token is required');
     }
-
-    if (newPassword !== confirmPassword) {
-      throw new BadRequestException(
-        "New Password and Confirm Password do not match"
-      );
-    }
-
-    return this.authenticationService.forgotPassword(email, newPassword);
+    return this.authenticationService.verifyEmailToken(token);
   }
 
-  // @Get(":id")
-  // findOne(@Param("id") id: string) {
-  //   return this.authenticationService.findOne(+id);
-  // }
-
-  // @Patch(":id")
-  // update(
-  //   @Param("id") id: string,
-  //   @Body() updateAuthenticationDto: UpdateAuthenticationDto
-  // ) {
-  //   return this.authenticationService.update(+id, updateAuthenticationDto);
-  // }
-
-  // @Delete(":id")
-  // remove(@Param("id") id: string) {
-  //   return this.authenticationService.remove(+id);
-  // }
 }
