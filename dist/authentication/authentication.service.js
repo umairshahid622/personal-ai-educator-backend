@@ -23,9 +23,8 @@ const uuid_1 = require("uuid");
 const mailer_1 = require("@nestjs-modules/mailer");
 const config_1 = require("@nestjs/config");
 let AuthenticationService = class AuthenticationService {
-    constructor(userRepository, dataSource, jwtService, mailerService, config) {
+    constructor(userRepository, jwtService, mailerService, config) {
         this.userRepository = userRepository;
-        this.dataSource = dataSource;
         this.jwtService = jwtService;
         this.mailerService = mailerService;
         this.config = config;
@@ -50,6 +49,8 @@ let AuthenticationService = class AuthenticationService {
             }
             await this.userRepository.remove(existing);
         }
+        const ttlHours = this.config.get("EMAIL_TOKEN_TTL_HOURS", 24);
+        const expires = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
         const hashed = await bcrypt.hash(password, 10);
         const user = this.userRepository.create({
             email,
@@ -57,7 +58,7 @@ let AuthenticationService = class AuthenticationService {
             password: hashed,
             dateOfBirth,
             emailVerificationToken: (0, uuid_1.v4)(),
-            emailTokenExpires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+            emailTokenExpires: expires,
             emailVerified: false,
         });
         await this.userRepository.save(user);
@@ -143,7 +144,6 @@ exports.AuthenticationService = AuthenticationService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(users_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.DataSource,
         jwt_1.JwtService,
         mailer_1.MailerService,
         config_1.ConfigService])

@@ -10,12 +10,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { JwtService } from "@nestjs/jwt";
-import { consoleError } from "src/utilities/logFunctions";
 import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,
 } from "src/users/dto/create-users.dto";
-import { UpdateAuthenticationDto } from "src/users/dto/update-users.dto";
 import { User } from "src/users/entities/users.entity";
 import { v4 as uuidv4 } from "uuid";
 import { MailerService } from "@nestjs-modules/mailer";
@@ -26,7 +24,6 @@ export class AuthenticationService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
     private readonly config: ConfigService
@@ -60,6 +57,9 @@ export class AuthenticationService {
       await this.userRepository.remove(existing);
     }
 
+    const ttlHours = this.config.get<number>("EMAIL_TOKEN_TTL_HOURS", 24);
+    const expires = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+
     const hashed = await bcrypt.hash(password, 10);
     const user = this.userRepository.create({
       email,
@@ -67,7 +67,7 @@ export class AuthenticationService {
       password: hashed,
       dateOfBirth,
       emailVerificationToken: uuidv4(),
-      emailTokenExpires: new Date(Date.now() + 1000 * 60 * 60 * 24), // 24h
+      emailTokenExpires: expires,
       emailVerified: false,
     });
 
@@ -84,41 +84,39 @@ export class AuthenticationService {
     loginDto: LoginAuthenticationDto
   ): Promise<{ accessToken: string; message: string }> {
     const { email, password } = loginDto;
-  
+
     if (!email || !password) {
       throw new BadRequestException("Email and password are required");
     }
-  
+
     const user = await this.userRepository.findOne({
       where: { email },
       select: ["uuid", "password", "emailVerified"],
     });
-  
+
     if (!user) {
       throw new UnauthorizedException("Invalid credentials");
     }
-  
+
     if (!user.emailVerified) {
       throw new UnauthorizedException(
         "Email not verified. Please check your inbox for the verification link."
       );
     }
-  
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException("Invalid credentials");
     }
-  
+
     const payload = { userId: user.uuid };
     const accessToken = this.jwtService.sign(payload);
-  
+
     return {
       accessToken,
       message: "Logged in successfully!",
     };
   }
-  
 
   async verifyEmailToken(
     token: string

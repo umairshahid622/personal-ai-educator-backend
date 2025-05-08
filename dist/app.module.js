@@ -27,12 +27,15 @@ const ebook_entity_1 = require("./ebook/entities/ebook.entity");
 const quiz_module_1 = require("./quiz/quiz.module");
 const certificates_module_1 = require("./certificates/certificates.module");
 const degree_module_1 = require("./degree/degree.module");
+const cleanup_service_1 = require("./services/cleanup.service");
+const schedule_1 = require("@nestjs/schedule");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            schedule_1.ScheduleModule.forRoot(),
             typeorm_1.TypeOrmModule.forFeature([
                 course_entity_1.Courses,
                 category_entity_1.Categories,
@@ -71,7 +74,7 @@ exports.AppModule = AppModule = __decorate([
             degree_module_1.DegreeModule,
         ],
         controllers: [app_controller_1.AppController],
-        providers: [app_service_1.AppService],
+        providers: [app_service_1.AppService, cleanup_service_1.CleanupService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

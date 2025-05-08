@@ -20,9 +20,12 @@ import { Ebook } from "./ebook/entities/ebook.entity";
 import { QuizModule } from './quiz/quiz.module';
 import { CertificatesModule } from './certificates/certificates.module';
 import { DegreeModule } from './degree/degree.module';
+import { CleanupService } from "./services/cleanup.service";
+import { ScheduleModule } from "@nestjs/schedule";
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       Courses,
       Categories,
@@ -70,6 +73,6 @@ import { DegreeModule } from './degree/degree.module';
     DegreeModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, CleanupService],
 })
 export class AppModule {}
