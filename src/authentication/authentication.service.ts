@@ -190,12 +190,10 @@ export class AuthenticationService {
     user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60);
     await this.userRepository.save(user);
 
-    
-
     const frontend = this.config.get<string>("FRONTEND_URL");
     const resetUrl = `${frontend}/auth/reset-password?token=${token}`;
     console.log(resetUrl);
-    
+
     await this.mailerService.sendMail({
       to: user.email,
       subject: "Reset your password",
@@ -225,7 +223,6 @@ export class AuthenticationService {
       throw new BadRequestException("Invalid or expired reset token");
     }
 
-  
     user.password = await bcrypt.hash(newPassword, 10);
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
@@ -233,4 +230,30 @@ export class AuthenticationService {
 
     return { message: "Password updated successfully." };
   }
+
+  async validatePasswordResetToken(
+    token: string
+  ): Promise<{ message: string }> {
+
+    console.log(token);
+    
+    if (!token) {
+      throw new BadRequestException("Reset token is required");
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { passwordResetToken: token },
+    });
+    if (!user) {
+      throw new BadRequestException("Invalid reset token");
+    }
+    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+      throw new BadRequestException("Reset token has expired");
+    }
+
+    return { message: "Password Reset link valid" };
+  }
 }
+
+
+// http://localhost:3000/auth/reset-password?token=3c083634-2791-406b-accf-091b3f07bd50

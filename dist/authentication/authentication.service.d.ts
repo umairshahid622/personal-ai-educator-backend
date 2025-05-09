@@ -31,4 +31,7 @@ export declare class AuthenticationService {
     resetPassword(token: string, newPassword: string): Promise<{
         message: string;
     }>;
+    validatePasswordResetToken(token: string): Promise<{
+        message: string;
+    }>;
 }

@@ -16,7 +16,10 @@ import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,
 } from "src/users/dto/create-users.dto";
-import { ForgotPasswordDto, ResetPasswordDto } from "src/users/dto/forgot-password.dto";
+import {
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from "src/users/dto/forgot-password.dto";
 
 @Controller("authentication")
 export class AuthenticationController {
@@ -46,12 +49,17 @@ export class AuthenticationController {
   @Post("forgot-password")
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     console.log(dto.email);
-    
+
     return this.authenticationService.requestPasswordReset(dto.email);
   }
 
   @Post("reset-password")
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authenticationService.resetPassword(dto.token, dto.newPassword);
+  }
+
+  @Get("validate-reset-password")
+  validatePasswordToken(@Query('token') token: string) {
+    return this.authenticationService.validatePasswordResetToken(token);
   }
 }

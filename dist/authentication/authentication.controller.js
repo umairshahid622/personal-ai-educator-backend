@@ -40,6 +40,9 @@ let AuthenticationController = class AuthenticationController {
     resetPassword(dto) {
         return this.authenticationService.resetPassword(dto.token, dto.newPassword);
     }
+    validatePasswordToken(token) {
+        return this.authenticationService.validatePasswordResetToken(token);
+    }
 };
 exports.AuthenticationController = AuthenticationController;
 __decorate([
@@ -78,6 +81,13 @@ __decorate([
     __metadata("design:paramtypes", [forgot_password_dto_1.ResetPasswordDto]),
     __metadata("design:returntype", void 0)
 ], AuthenticationController.prototype, "resetPassword", null);
+__decorate([
+    (0, common_1.Get)("validate-reset-password"),
+    __param(0, (0, common_1.Query)('token')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], AuthenticationController.prototype, "validatePasswordToken", null);
 exports.AuthenticationController = AuthenticationController = __decorate([
     (0, common_1.Controller)("authentication"),
     __metadata("design:paramtypes", [authentication_service_1.AuthenticationService])

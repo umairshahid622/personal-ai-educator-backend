@@ -21,4 +21,7 @@ export declare class AuthenticationController {
     resetPassword(dto: ResetPasswordDto): Promise<{
         message: string;
     }>;
+    validatePasswordToken(token: string): Promise<{
+        message: string;
+    }>;
 }

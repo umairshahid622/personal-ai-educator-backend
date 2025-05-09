@@ -176,6 +176,22 @@ let AuthenticationService = class AuthenticationService {
         await this.userRepository.save(user);
         return { message: "Password updated successfully." };
     }
+    async validatePasswordResetToken(token) {
+        console.log(token);
+        if (!token) {
+            throw new common_1.BadRequestException("Reset token is required");
+        }
+        const user = await this.userRepository.findOne({
+            where: { passwordResetToken: token },
+        });
+        if (!user) {
+            throw new common_1.BadRequestException("Invalid reset token");
+        }
+        if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+            throw new common_1.BadRequestException("Reset token has expired");
+        }
+        return { message: "Token is valid" };
+    }
 };
 exports.AuthenticationService = AuthenticationService;
 exports.AuthenticationService = AuthenticationService = __decorate([
