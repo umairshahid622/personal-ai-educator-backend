@@ -1,5 +1,6 @@
 import { AuthenticationService } from "./authentication.service";
 import { CreateAuthenticationDto, LoginAuthenticationDto } from "src/users/dto/create-users.dto";
+import { ForgotPasswordDto, ResetPasswordDto } from "src/users/dto/forgot-password.dto";
 export declare class AuthenticationController {
     private readonly authenticationService;
     constructor(authenticationService: AuthenticationService);
@@ -13,5 +14,11 @@ export declare class AuthenticationController {
     verifyEmail(token: string): Promise<{
         message: string;
         accessToken?: string;
+    }>;
+    forgotPassword(dto: ForgotPasswordDto): Promise<{
+        message: string;
+    }>;
+    resetPassword(dto: ResetPasswordDto): Promise<{
+        message: string;
     }>;
 }

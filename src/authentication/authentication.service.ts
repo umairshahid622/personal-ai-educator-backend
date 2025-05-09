@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException,
 } from "@nestjs/common";
 
@@ -178,5 +179,58 @@ export class AuthenticationService {
         expires: user.emailTokenExpires,
       },
     });
+  }
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new NotFoundException("No user with that email");
+
+    const token = uuidv4();
+    user.passwordResetToken = token;
+    user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60);
+    await this.userRepository.save(user);
+
+    
+
+    const frontend = this.config.get<string>("FRONTEND_URL");
+    const resetUrl = `${frontend}/auth/reset-password?token=${token}`;
+    console.log(resetUrl);
+    
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: "Reset your password",
+      template: "forgot-password",
+      context: {
+        name: user.displayName,
+        resetUrl,
+        expires: user.passwordResetExpires,
+      },
+    });
+
+    return { message: "Password reset email sent. Check your inbox." };
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string
+  ): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({
+      where: { passwordResetToken: token },
+    });
+    if (
+      !user ||
+      !user.passwordResetExpires ||
+      user.passwordResetExpires < new Date()
+    ) {
+      throw new BadRequestException("Invalid or expired reset token");
+    }
+
+  
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    await this.userRepository.save(user);
+
+    return { message: "Password updated successfully." };
   }
 }

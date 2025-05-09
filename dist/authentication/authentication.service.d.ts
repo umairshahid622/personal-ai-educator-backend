@@ -25,4 +25,10 @@ export declare class AuthenticationService {
         message: string;
     }>;
     private sendVerificationEmail;
+    requestPasswordReset(email: string): Promise<{
+        message: string;
+    }>;
+    resetPassword(token: string, newPassword: string): Promise<{
+        message: string;
+    }>;
 }

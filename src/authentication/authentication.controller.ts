@@ -16,7 +16,7 @@ import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,
 } from "src/users/dto/create-users.dto";
-import { UpdateAuthenticationDto } from "src/users/dto/update-users.dto";
+import { ForgotPasswordDto, ResetPasswordDto } from "src/users/dto/forgot-password.dto";
 
 @Controller("authentication")
 export class AuthenticationController {
@@ -33,14 +33,25 @@ export class AuthenticationController {
     return this.authenticationService.logIn(loginAuthenticationDto);
   }
 
-  @Get('verify')
+  @Get("verify")
   async verifyEmail(
-    @Query('token') token: string,
+    @Query("token") token: string
   ): Promise<{ message: string; accessToken?: string }> {
     if (!token) {
-      throw new BadRequestException('Verification token is required');
+      throw new BadRequestException("Verification token is required");
     }
     return this.authenticationService.verifyEmailToken(token);
   }
 
+  @Post("forgot-password")
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    console.log(dto.email);
+    
+    return this.authenticationService.requestPasswordReset(dto.email);
+  }
+
+  @Post("reset-password")
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authenticationService.resetPassword(dto.token, dto.newPassword);
+  }
 }

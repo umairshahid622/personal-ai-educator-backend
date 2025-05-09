@@ -50,11 +50,17 @@ export class User {
   @Column({ default: false })
   emailVerified: boolean;
 
-  @Column({type:'text' ,nullable: true })
+  @Column({ type: "text", nullable: true })
   emailVerificationToken: string | null;
 
   @Column({ type: "timestamp", nullable: true })
   emailTokenExpires: Date | null;
+
+  @Column({ type: "uuid", nullable: true })
+  passwordResetToken: string | null;
+
+  @Column({ type: "timestamp", nullable: true })
+  passwordResetExpires: Date | null;
 
   @BeforeInsert()
   generateId() {

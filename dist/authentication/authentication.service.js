@@ -138,6 +138,44 @@ let AuthenticationService = class AuthenticationService {
             },
         });
     }
+    async requestPasswordReset(email) {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user)
+            throw new common_1.NotFoundException("No user with that email");
+        const token = (0, uuid_1.v4)();
+        user.passwordResetToken = token;
+        user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60);
+        await this.userRepository.save(user);
+        const frontend = this.config.get("FRONTEND_URL");
+        const resetUrl = `${frontend}/auth/reset-password?token=${token}`;
+        console.log(resetUrl);
+        await this.mailerService.sendMail({
+            to: user.email,
+            subject: "Reset your password",
+            template: "forgot-password",
+            context: {
+                name: user.displayName,
+                resetUrl,
+                expires: user.passwordResetExpires,
+            },
+        });
+        return { message: "Password reset email sent. Check your inbox." };
+    }
+    async resetPassword(token, newPassword) {
+        const user = await this.userRepository.findOne({
+            where: { passwordResetToken: token },
+        });
+        if (!user ||
+            !user.passwordResetExpires ||
+            user.passwordResetExpires < new Date()) {
+            throw new common_1.BadRequestException("Invalid or expired reset token");
+        }
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.passwordResetToken = null;
+        user.passwordResetExpires = null;
+        await this.userRepository.save(user);
+        return { message: "Password updated successfully." };
+    }
 };
 exports.AuthenticationService = AuthenticationService;
 exports.AuthenticationService = AuthenticationService = __decorate([

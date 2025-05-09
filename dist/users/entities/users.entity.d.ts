@@ -13,6 +13,8 @@ export declare class User {
     emailVerified: boolean;
     emailVerificationToken: string | null;
     emailTokenExpires: Date | null;
+    passwordResetToken: string | null;
+    passwordResetExpires: Date | null;
     generateId(): void;
     createdAt: Date;
     updatedAt: Date;
