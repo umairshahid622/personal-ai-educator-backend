@@ -61,118 +61,19 @@ export class QuizService {
   ) {}
 
   async getUserBundles(userId: string): Promise<Quiz[]> {
-    const bundles = await this.quizRepo.find({
+    return this.quizRepo.find({
       where: { userId },
       order: { createdAt: "DESC" },
     });
-    return bundles;
   }
+
   async getOrCreateForUser(
     userId: string,
     subCategoryId: string
   ): Promise<Quiz> {
-    // 1) Try to load existing quiz (items is a JSON column, so it comes back automatically)
-    let quiz = await this.quizRepo.findOne({
-      where: { userId, subCategoryId },
-    });
-
-    if (quiz) {
-      // 2) Recompute overall pass status
-      const allPassed = quiz.items.every((i) => i.status === "passed");
-      if (quiz.isPassed !== allPassed) {
-        quiz.isPassed = allPassed;
-        await this.quizRepo.save(quiz);
-      }
-
-      // 4) If now fully passed, issue certificates/degrees if they don't already exist
-      if (allPassed) {
-        // a) Sub-category cert
-        const certExists = await this.certRepo.findOne({
-          where: { userId, subCategoryId },
-        });
-        if (!certExists) {
-          const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
-          await this.certRepo.save({
-            userId,
-            subCategoryId,
-            pdfPath,
-            originalName: (
-              await this.subCatRepo.findOneOrFail({
-                where: { id: subCategoryId },
-              })
-            ).name,
-          });
-        }
-
-        // b) Degree cert: check *all* sub-cats in this category
-        const subCat = await this.subCatRepo.findOne({
-          where: { id: subCategoryId },
-          relations: ["category", "category.subCategories"],
-        });
-
-        if (!subCat) {
-          throw new NotFoundException(
-            `SubCategory ${subCategoryId} not found.`
-          );
-        }
-        const allSubCatsPassed = await Promise.all(
-          subCat.category.subCategories.map(async (sc) => {
-            const b = await this.quizRepo.findOne({
-              where: { userId, subCategoryId: sc.id },
-            });
-            return b?.isPassed === true;
-          })
-        ).then((arr) => arr.every((x) => x));
-
-        if (allSubCatsPassed) {
-          const categoryId = subCat.category.uuid;
-          const degExists = await this.degreeRepo.findOne({
-            where: { userId, categoryId },
-          });
-          if (!degExists) {
-            const pdfPath = await this.buildDegreePdf(userId, categoryId);
-            await this.degreeRepo.save({
-              userId,
-              categoryId,
-              pdfPath,
-              originalName: subCat.category.name,
-            });
-          }
-        }
-      }
-
-      return quiz;
-    }
-
-    // 5) No quiz yet: create initial locked/unlocked bundle
-    const subCat = await this.subCatRepo.findOne({
-      where: { id: subCategoryId },
-    });
-    if (!subCat) {
-      throw new NotFoundException(`SubCategory ${subCategoryId} not found.`);
-    }
-
-    const prompt = `Generate exactly 7 quiz titles for the course ${subCat.name} in pure JSON format. 
-  Only the first quiz should have status "unlocked", the rest "locked".
-  Return a JSON array like:
-  [
-    {"title":"…","status":"unlocked"},
-    …,
-    {"title":"…","status":"locked"}
-  ]
-  No explanation—just JSON.`;
-
-    const aiResp = await this.ai.getCompletion(prompt);
-    const raw = aiResp.choices?.[0]?.message?.content ?? "";
-    const items = this.parseJsonArray(raw);
-
-    quiz = this.quizRepo.create({
-      userId,
-      subCategoryId,
-      items,
-      isPassed: false,
-    });
-    return this.quizRepo.save(quiz);
+    const quiz = await this.findOrCreateQuiz(userId, subCategoryId);
+    await this.syncPassAndCertificates(quiz, userId, subCategoryId);
+    return quiz;
   }
 
   async generateExamByTitle(
@@ -213,11 +114,9 @@ export class QuizService {
     dto: UpdateQuizItemDto
   ): Promise<UpdateQuizItemResponse> {
     const { subCategoryId, title, marks } = dto;
-    const quiz = await this.quizRepo.findOne({
+    const quiz = await this.quizRepo.findOneOrFail({
       where: { userId, subCategoryId },
-      relations: ["subCategory", "user"],
     });
-    if (!quiz) throw new NotFoundException("Quiz bundle not found");
 
     const idx = quiz.items.findIndex((i) => i.title === title);
     if (idx < 0) throw new NotFoundException("Quiz title not found");
@@ -226,22 +125,30 @@ export class QuizService {
     const passingMarks = Math.ceil(totalQuestions * 0.7);
     const passed = marks >= passingMarks;
 
-    // mark this one passed/failed
     quiz.items[idx].status = passed ? "passed" : "failed";
 
     let unlockMessage: string | undefined;
-    // unlock the next one if passed
     if (passed && quiz.items[idx + 1]?.status === "locked") {
       quiz.items[idx + 1].status = "unlocked";
       unlockMessage = `Quiz "${quiz.items[idx + 1].title}" has been unlocked.`;
     }
 
-    // check if the whole bundle is now passed
-    quiz.isPassed = quiz.items.every((it) => it.status === "passed");
+    // persist status
+    quiz.isPassed = quiz.items.every((i) => i.status === "passed");
     await this.quizRepo.save(quiz);
 
-    // build base response
-    const response: UpdateQuizItemResponse = {
+    // issue certificates if fully passed
+    let certificateMessage: string | undefined;
+    let degreeMessage: string | undefined;
+    if (quiz.isPassed) {
+      certificateMessage = await this.issueSubCategoryCert(
+        userId,
+        subCategoryId
+      );
+      degreeMessage = await this.issueDegreeCert(userId, subCategoryId);
+    }
+
+    return {
       message: passed
         ? `Quiz passed (${marks}/${totalQuestions}).`
         : `Quiz failed (${marks}/${totalQuestions}), need ${passingMarks} marks to pass.`,
@@ -250,61 +157,121 @@ export class QuizService {
       totalQuestions,
       passingMarks,
       obtainedMarks: marks,
-      ...(unlockMessage ? { unlockMessage } : {}),
+      ...(unlockMessage && { unlockMessage }),
+      ...(certificateMessage && { certificateMessage }),
+      ...(degreeMessage && { degreeMessage }),
     };
+  }
 
-    // if bundle just completed, issue certificates/degrees…
-    if (passed && quiz.isPassed) {
-      const subCat = await this.subCatRepo.findOne({
-        where: { id: subCategoryId },
-        relations: ["category", "category.subCategories"],
-      });
-      if (!subCat) throw new NotFoundException("SubCategory not found");
+  private async findOrCreateQuiz(
+    userId: string,
+    subCategoryId: string
+  ): Promise<Quiz> {
+    const existing = await this.quizRepo.findOne({
+      where: { userId, subCategoryId },
+    });
+    if (existing) return existing;
 
-      // sub-category cert
-      const certExists = await this.certRepo.findOne({
-        where: { userId, subCategoryId },
-      });
-      if (!certExists) {
-        const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
-        await this.certRepo.save({
-          userId,
-          subCategoryId,
-          pdfPath,
-          originalName: subCat.name,
-        });
-        response.certificateMessage = `Certificate issued for subject “${subCat.name}”.`;
-      }
+    const subCat = await this.subCatRepo.findOneOrFail({
+      where: { id: subCategoryId },
+    });
+    const prompt = `Generate exactly 7 quiz titles for the course ${subCat.name} in pure JSON format.
+  Only the first quiz should have status "unlocked", the rest "locked".
+  Return a JSON array like:
+  [
+    {"title":"…","status":"unlocked"},
+    …,
+    {"title":"…","status":"locked"}
+  ]
+  No explanation—just JSON.`;
 
-      // degree cert
-      const allPassed = await Promise.all(
+    const aiResp = await this.ai.getCompletion(prompt);
+    const items = this.parseJsonArray(
+      aiResp.choices?.[0]?.message?.content || "[]"
+    );
+
+    const quiz = this.quizRepo.create({
+      userId,
+      subCategoryId,
+      items,
+      isPassed: false,
+    });
+    return this.quizRepo.save(quiz);
+  }
+
+  private async syncPassAndCertificates(
+    quiz: Quiz,
+    userId: string,
+    subCategoryId: string
+  ) {
+    const allPassed = quiz.items.every((i) => i.status === "passed");
+    if (quiz.isPassed !== allPassed) {
+      quiz.isPassed = allPassed;
+      await this.quizRepo.save(quiz);
+    }
+    if (allPassed) {
+      await this.issueSubCategoryCert(userId, subCategoryId);
+      await this.issueDegreeCert(userId, subCategoryId);
+    }
+  }
+
+  private async issueSubCategoryCert(
+    userId: string,
+    subCategoryId: string
+  ): Promise<string | undefined> {
+    const exists = await this.certRepo.findOne({
+      where: { userId, subCategoryId },
+    });
+    if (exists) return;
+
+    const subCat = await this.subCatRepo.findOneOrFail({
+      where: { id: subCategoryId },
+    });
+    const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+    await this.certRepo.save({
+      userId,
+      subCategoryId,
+      pdfPath,
+      originalName: subCat.name,
+    });
+    return `Certificate issued for sub-category "${subCat.name}".`;
+  }
+
+  private async issueDegreeCert(
+    userId: string,
+    subCategoryId: string
+  ): Promise<string | undefined> {
+    const subCat = await this.subCatRepo.findOneOrFail({
+      where: { id: subCategoryId },
+      relations: ["category", "category.subCategories"],
+    });
+
+    const allPassed = (
+      await Promise.all(
         subCat.category.subCategories.map(async (sc) => {
-          const b = await this.quizRepo.findOne({
+          const q = await this.quizRepo.findOne({
             where: { userId, subCategoryId: sc.id },
           });
-          return b?.isPassed === true;
+          return q?.isPassed;
         })
-      ).then((arr) => arr.every((x) => x));
+      )
+    ).every((v) => v === true);
+    if (!allPassed) return;
 
-      if (allPassed) {
-        const categoryId = subCat.category.uuid;
-        const degExists = await this.degreeRepo.findOne({
-          where: { userId, categoryId },
-        });
-        if (!degExists) {
-          const pdfPath = await this.buildDegreePdf(userId, categoryId);
-          await this.degreeRepo.save({
-            userId,
-            categoryId,
-            pdfPath,
-            originalName: subCat.category.name,
-          });
-          response.degreeMessage = `Degree certificate issued for “${subCat.category.name}.”`;
-        }
-      }
-    }
+    const categoryId = subCat.category.uuid;
+    const exists = await this.degreeRepo.findOne({
+      where: { userId, categoryId },
+    });
+    if (exists) return;
 
-    return response;
+    const pdfPath = await this.buildDegreePdf(userId, categoryId);
+    await this.degreeRepo.save({
+      userId,
+      categoryId,
+      pdfPath,
+      originalName: subCat.category.name,
+    });
+    return `Degree certificate issued for "${subCat.category.name}".`;
   }
 
   //================================================================================
