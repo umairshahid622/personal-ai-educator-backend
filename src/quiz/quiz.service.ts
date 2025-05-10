@@ -566,7 +566,7 @@ export class QuizService {
 
     doc.font(fontRegular).fontSize(16).fillColor("#333");
     if (subCategories.length >= 5) {
-      const line = subCategories.join("  |  ");
+      const line = subCategories.map((item) => item.name).join("  |  ");
       doc.text(line, margins.left + 20, listTop, {
         width: CW - 40,
         align: "center",
