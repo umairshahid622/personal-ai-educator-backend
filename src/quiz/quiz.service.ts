@@ -67,16 +67,84 @@ export class QuizService {
     });
     return bundles;
   }
-
   async getOrCreateForUser(
     userId: string,
     subCategoryId: string
   ): Promise<Quiz> {
+    // 1) Try to load existing quiz (items is a JSON column, so it comes back automatically)
     let quiz = await this.quizRepo.findOne({
       where: { userId, subCategoryId },
     });
-    if (quiz) return quiz;
 
+    if (quiz) {
+      // 2) Recompute overall pass status
+      const allPassed = quiz.items.every((i) => i.status === "passed");
+      if (quiz.isPassed !== allPassed) {
+        quiz.isPassed = allPassed;
+        await this.quizRepo.save(quiz);
+      }
+
+      // 4) If now fully passed, issue certificates/degrees if they don't already exist
+      if (allPassed) {
+        // a) Sub-category cert
+        const certExists = await this.certRepo.findOne({
+          where: { userId, subCategoryId },
+        });
+        if (!certExists) {
+          const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+          await this.certRepo.save({
+            userId,
+            subCategoryId,
+            pdfPath,
+            originalName: (
+              await this.subCatRepo.findOneOrFail({
+                where: { id: subCategoryId },
+              })
+            ).name,
+          });
+        }
+
+        // b) Degree cert: check *all* sub-cats in this category
+        const subCat = await this.subCatRepo.findOne({
+          where: { id: subCategoryId },
+          relations: ["category", "category.subCategories"],
+        });
+
+        if (!subCat) {
+          throw new NotFoundException(
+            `SubCategory ${subCategoryId} not found.`
+          );
+        }
+        const allSubCatsPassed = await Promise.all(
+          subCat.category.subCategories.map(async (sc) => {
+            const b = await this.quizRepo.findOne({
+              where: { userId, subCategoryId: sc.id },
+            });
+            return b?.isPassed === true;
+          })
+        ).then((arr) => arr.every((x) => x));
+
+        if (allSubCatsPassed) {
+          const categoryId = subCat.category.uuid;
+          const degExists = await this.degreeRepo.findOne({
+            where: { userId, categoryId },
+          });
+          if (!degExists) {
+            const pdfPath = await this.buildDegreePdf(userId, categoryId);
+            await this.degreeRepo.save({
+              userId,
+              categoryId,
+              pdfPath,
+              originalName: subCat.category.name,
+            });
+          }
+        }
+      }
+
+      return quiz;
+    }
+
+    // 5) No quiz yet: create initial locked/unlocked bundle
     const subCat = await this.subCatRepo.findOne({
       where: { id: subCategoryId },
     });
@@ -85,14 +153,14 @@ export class QuizService {
     }
 
     const prompt = `Generate exactly 7 quiz titles for the course ${subCat.name} in pure JSON format. 
-Only the first quiz should have status "unlocked", the rest "locked".
-Return a JSON array like:
-[
-  {"title":"…","status":"unlocked"},
-  …,
-  {"title":"…","status":"locked"}
-]
-No explanation—just JSON.`;
+  Only the first quiz should have status "unlocked", the rest "locked".
+  Return a JSON array like:
+  [
+    {"title":"…","status":"unlocked"},
+    …,
+    {"title":"…","status":"locked"}
+  ]
+  No explanation—just JSON.`;
 
     const aiResp = await this.ai.getCompletion(prompt);
     const raw = aiResp.choices?.[0]?.message?.content ?? "";
@@ -138,28 +206,6 @@ No explanation—just JSON.`;
     const aiResp = await this.ai.getCompletion(prompt);
     const raw = aiResp.choices?.[0]?.message?.content ?? "";
     return this.parseMcq(raw);
-  }
-
-  private parseMcq(raw: string): Mcq[] {
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const questions: Mcq[] = [];
-    let current: Partial<Mcq> = {};
-    for (const line of lines) {
-      if (/^Q\d+:/.test(line)) {
-        if (current.question) questions.push(current as Mcq);
-        current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
-      } else if (/^[abcd]\)/.test(line)) {
-        current.options!.push(line);
-      } else if (/^Correct Answer:/i.test(line)) {
-        current.answer = line.replace(/^Correct Answer:\s*/i, "");
-      }
-    }
-    if (current.question) questions.push(current as Mcq);
-
-    return questions;
   }
 
   async updateStatusByTitle(
@@ -585,5 +631,27 @@ No explanation—just JSON.`;
     const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
     const jsonText = fence ? fence[1] : raw;
     return JSON.parse(jsonText.trim());
+  }
+
+  private parseMcq(raw: string): Mcq[] {
+    const lines = raw
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const questions: Mcq[] = [];
+    let current: Partial<Mcq> = {};
+    for (const line of lines) {
+      if (/^Q\d+:/.test(line)) {
+        if (current.question) questions.push(current as Mcq);
+        current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
+      } else if (/^[abcd]\)/.test(line)) {
+        current.options!.push(line);
+      } else if (/^Correct Answer:/i.test(line)) {
+        current.answer = line.replace(/^Correct Answer:\s*/i, "");
+      }
+    }
+    if (current.question) questions.push(current as Mcq);
+
+    return questions;
   }
 }

@@ -23,9 +23,9 @@ export declare class QuizService {
     getUserBundles(userId: string): Promise<Quiz[]>;
     getOrCreateForUser(userId: string, subCategoryId: string): Promise<Quiz>;
     generateExamByTitle(userId: string, subCategoryId: string, title: string): Promise<Mcq[]>;
-    private parseMcq;
     updateStatusByTitle(userId: string, dto: UpdateQuizItemDto): Promise<UpdateQuizItemResponse>;
     private buildSubCategoryPdf;
     private buildDegreePdf;
     private parseJsonArray;
+    private parseMcq;
 }

@@ -55,8 +55,58 @@ let QuizService = class QuizService {
         let quiz = await this.quizRepo.findOne({
             where: { userId, subCategoryId },
         });
-        if (quiz)
+        if (quiz) {
+            const allPassed = quiz.items.every((i) => i.status === "passed");
+            if (quiz.isPassed !== allPassed) {
+                quiz.isPassed = allPassed;
+                await this.quizRepo.save(quiz);
+            }
+            if (allPassed) {
+                const certExists = await this.certRepo.findOne({
+                    where: { userId, subCategoryId },
+                });
+                if (!certExists) {
+                    const pdfPath = await this.buildSubCategoryPdf(userId, subCategoryId);
+                    await this.certRepo.save({
+                        userId,
+                        subCategoryId,
+                        pdfPath,
+                        originalName: (await this.subCatRepo.findOneOrFail({
+                            where: { id: subCategoryId },
+                        })).name,
+                    });
+                }
+                const subCat = await this.subCatRepo.findOne({
+                    where: { id: subCategoryId },
+                    relations: ["category", "category.subCategories"],
+                });
+                if (!subCat) {
+                    throw new common_1.NotFoundException(`SubCategory ${subCategoryId} not found.`);
+                }
+                const allSubCatsPassed = await Promise.all(subCat.category.subCategories.map(async (sc) => {
+                    const b = await this.quizRepo.findOne({
+                        where: { userId, subCategoryId: sc.id },
+                    });
+                    return b?.isPassed === true;
+                })).then((arr) => arr.every((x) => x));
+                if (allSubCatsPassed) {
+                    const categoryId = subCat.category.uuid;
+                    const degExists = await this.degreeRepo.findOne({
+                        where: { userId, categoryId },
+                    });
+                    if (!degExists) {
+                        const pdfPath = await this.buildDegreePdf(userId, categoryId);
+                        await this.degreeRepo.save({
+                            userId,
+                            categoryId,
+                            pdfPath,
+                            originalName: subCat.category.name,
+                        });
+                    }
+                }
+            }
             return quiz;
+        }
         const subCat = await this.subCatRepo.findOne({
             where: { id: subCategoryId },
         });
@@ -64,14 +114,14 @@ let QuizService = class QuizService {
             throw new common_1.NotFoundException(`SubCategory ${subCategoryId} not found.`);
         }
         const prompt = `Generate exactly 7 quiz titles for the course ${subCat.name} in pure JSON format. 
-Only the first quiz should have status "unlocked", the rest "locked".
-Return a JSON array like:
-[
-  {"title":"…","status":"unlocked"},
-  …,
-  {"title":"…","status":"locked"}
-]
-No explanation—just JSON.`;
+  Only the first quiz should have status "unlocked", the rest "locked".
+  Return a JSON array like:
+  [
+    {"title":"…","status":"unlocked"},
+    …,
+    {"title":"…","status":"locked"}
+  ]
+  No explanation—just JSON.`;
         const aiResp = await this.ai.getCompletion(prompt);
         const raw = aiResp.choices?.[0]?.message?.content ?? "";
         const items = this.parseJsonArray(raw);
@@ -109,30 +159,6 @@ No explanation—just JSON.`;
         const aiResp = await this.ai.getCompletion(prompt);
         const raw = aiResp.choices?.[0]?.message?.content ?? "";
         return this.parseMcq(raw);
-    }
-    parseMcq(raw) {
-        const lines = raw
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter(Boolean);
-        const questions = [];
-        let current = {};
-        for (const line of lines) {
-            if (/^Q\d+:/.test(line)) {
-                if (current.question)
-                    questions.push(current);
-                current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
-            }
-            else if (/^[abcd]\)/.test(line)) {
-                current.options.push(line);
-            }
-            else if (/^Correct Answer:/i.test(line)) {
-                current.answer = line.replace(/^Correct Answer:\s*/i, "");
-            }
-        }
-        if (current.question)
-            questions.push(current);
-        return questions;
     }
     async updateStatusByTitle(userId, dto) {
         const { subCategoryId, title, marks } = dto;
@@ -480,6 +506,30 @@ No explanation—just JSON.`;
         const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
         const jsonText = fence ? fence[1] : raw;
         return JSON.parse(jsonText.trim());
+    }
+    parseMcq(raw) {
+        const lines = raw
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+        const questions = [];
+        let current = {};
+        for (const line of lines) {
+            if (/^Q\d+:/.test(line)) {
+                if (current.question)
+                    questions.push(current);
+                current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
+            }
+            else if (/^[abcd]\)/.test(line)) {
+                current.options.push(line);
+            }
+            else if (/^Correct Answer:/i.test(line)) {
+                current.answer = line.replace(/^Correct Answer:\s*/i, "");
+            }
+        }
+        if (current.question)
+            questions.push(current);
+        return questions;
     }
 };
 exports.QuizService = QuizService;
