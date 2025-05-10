@@ -26,16 +26,4 @@ export class EbookService {
   findAll() {
     return this.ebookRepo.find();
   }
-
-  findOne(id: number) {
-    return `This action returns a #${id} ebook`;
-  }
-
-  update(id: number, updateEbookDto: UpdateEbookDto) {
-    return `This action updates a #${id} ebook`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} ebook`;
-  }
 }

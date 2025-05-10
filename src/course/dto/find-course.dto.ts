@@ -1,5 +1,6 @@
 // src/course/dto/find-course.dto.ts
 import { IsInt, Min, IsOptional, IsString, IsUUID } from "class-validator";
+import { Courses } from "../entities/course.entity";
 
 export class FindCoursesDto {
   @IsInt()
@@ -16,5 +17,11 @@ export class FindCoursesDto {
   @IsString()
   @IsOptional()
   search?: string;
+}
 
+export interface PaginatedResult {
+  data: Courses[];
+  total: number;
+  page: number;
+  lastPage: number;
 }

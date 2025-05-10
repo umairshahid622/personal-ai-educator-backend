@@ -2,78 +2,73 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
-} from "@nestjs/common";
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { v4 as uuidv4 } from 'uuid';
 
-import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
-import * as bcrypt from "bcrypt";
-import { JwtService } from "@nestjs/jwt";
+import { User } from 'src/users/entities/users.entity';
 import {
   CreateAuthenticationDto,
   LoginAuthenticationDto,
-} from "src/users/dto/create-users.dto";
-import { User } from "src/users/entities/users.entity";
-import { v4 as uuidv4 } from "uuid";
-import { MailerService } from "@nestjs-modules/mailer";
-import { ConfigService } from "@nestjs/config";
+} from 'src/users/dto/create-users.dto';
 
 @Injectable()
 export class AuthenticationService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepo: Repository<User>,
     private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
-    private readonly config: ConfigService
+    private readonly mailer: MailerService,
+    private readonly config: ConfigService,
   ) {}
 
-  async create(dto: CreateAuthenticationDto): Promise<{ message: string }> {
+  // ─── Account Creation & Email Verification ───────────────────────────────────
+  async create(
+    dto: CreateAuthenticationDto,
+  ): Promise<{ message: string }> {
     const { email, password, displayName, dateOfBirth } = dto;
-    if (!email || !password || !displayName || !dateOfBirth) {
+    if (![email, password, displayName, dateOfBirth].every(Boolean)) {
       throw new BadRequestException(
-        "Email, password, display name and date of birth are required"
+        'Email, password, display name and date of birth are required',
       );
     }
 
-    const existing = await this.userRepository.findOne({
-      where: { email },
-    });
-
+    const existing = await this.userRepo.findOne({ where: { email } });
     if (existing) {
       if (existing.emailVerified) {
-        throw new ConflictException("Email already exists");
+        throw new ConflictException('Email already exists');
       }
-
-      if (existing.emailTokenExpires! > new Date()) {
+      // resend if token still valid
+      if (existing.emailTokenExpires && existing.emailTokenExpires > new Date()) {
         await this.sendVerificationEmail(existing);
         return {
-          message:
-            "Verification email resent. Please check your inbox (and spam).",
+          message: 'Verification email resent. Please check your inbox (and spam).',
         };
       }
-
-      await this.userRepository.remove(existing);
+      await this.userRepo.remove(existing);
     }
 
-    const ttlHours = this.config.get<number>("EMAIL_TOKEN_TTL_HOURS", 24);
-    const expires = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-
     const hashed = await bcrypt.hash(password, 10);
-    const user = this.userRepository.create({
+    const expires = this.generateExpiry(
+      this.config.get<number>('EMAIL_TOKEN_TTL_HOURS', 24),
+    );
+    const user = this.userRepo.create({
       email,
       displayName,
       password: hashed,
       dateOfBirth,
+      emailVerified: false,
       emailVerificationToken: uuidv4(),
       emailTokenExpires: expires,
-      emailVerified: false,
     });
-
-    await this.userRepository.save(user);
-
+    await this.userRepo.save(user);
     await this.sendVerificationEmail(user);
 
     return {
@@ -81,177 +76,141 @@ export class AuthenticationService {
     };
   }
 
-  async logIn(
-    loginDto: LoginAuthenticationDto
-  ): Promise<{ accessToken: string; message: string }> {
-    const { email, password } = loginDto;
-
-    if (!email || !password) {
-      throw new BadRequestException("Email and password are required");
-    }
-
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: ["uuid", "password", "emailVerified"],
-    });
-
-    if (!user) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-
-    if (!user.emailVerified) {
-      throw new UnauthorizedException(
-        "Email not verified. Please check your inbox for the verification link."
-      );
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException("Invalid credentials");
-    }
-
-    const payload = { userId: user.uuid };
-    const accessToken = this.jwtService.sign(payload);
-
-    return {
-      accessToken,
-      message: "Logged in successfully!",
-    };
-  }
-
   async verifyEmailToken(
-    token: string
+    token: string,
   ): Promise<{ message: string; accessToken?: string }> {
-    const user = await this.userRepository.findOne({
-      where: { emailVerificationToken: token },
-    });
-
-    if (!user) {
-      throw new BadRequestException("Invalid verification token");
-    }
+    const user = await this.findByToken(
+      'emailVerificationToken',
+      token,
+      'Invalid verification token',
+    );
     if (!user.emailTokenExpires || user.emailTokenExpires < new Date()) {
-      throw new BadRequestException("Token has expired");
+      throw new BadRequestException('Token has expired');
     }
 
     user.emailVerified = true;
     user.emailVerificationToken = null;
     user.emailTokenExpires = null;
-    await this.userRepository.save(user);
+    await this.userRepo.save(user);
 
-    // Optionally sign and return a JWT so the user is automatically logged in:
-    const payload = { userId: user.uuid };
-    const accessToken = this.jwtService.sign(payload);
-
-    return {
-      message: "Email successfully verified!",
-      accessToken: accessToken,
-    };
+    const accessToken = this.signJwt(user.uuid);
+    return { message: 'Email successfully verified!', accessToken };
   }
 
-  async forgotPassword(
-    email: string,
-    newPassword: string
-  ): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({ where: { email } });
-
-    if (!user) {
-      throw new BadRequestException("No user found with this email");
+  // ─── Authentication ─────────────────────────────────────────────────────────
+  async logIn(
+    dto: LoginAuthenticationDto,
+  ): Promise<{ accessToken: string; message: string }> {
+    const { email, password } = dto;
+    if (![email, password].every(Boolean)) {
+      throw new BadRequestException('Email and password are required');
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    user.password = hashedPassword;
-    await this.userRepository.save(user);
-
-    return { message: "Password updated successfully" };
-  }
-
-  private async sendVerificationEmail(user: User) {
-    const frontendUrl = this.config.get<string>("FRONTEND_URL");
-    const verifyUrl = `${frontendUrl}/auth/verify?token=${user.emailVerificationToken}`;
-    await this.mailerService.sendMail({
-      to: user.email,
-      subject: "Confirm your email",
-      template: "verify_email",
-      context: {
-        name: user.displayName,
-        verifyUrl,
-        expires: user.emailTokenExpires,
-      },
+    const user = await this.userRepo.findOne({
+      where: { email },
+      select: ['uuid', 'password', 'emailVerified'],
     });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Email not verified. Please check your inbox for the verification link.',
+      );
+    }
+
+    return { accessToken: this.signJwt(user.uuid), message: 'Logged in successfully!' };
   }
 
-  async requestPasswordReset(email: string): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) throw new NotFoundException("No user with that email");
+  // ─── Password Reset ──────────────────────────────────────────────────────────
+  async requestPasswordReset(
+    email: string,
+  ): Promise<{ message: string }> {
+    const user = await this.userRepo.findOne({ where: { email } });
+    if (!user) throw new NotFoundException('No user with that email');
 
-    const token = uuidv4();
-    user.passwordResetToken = token;
-    user.passwordResetExpires = new Date(Date.now() + 1000 * 60 * 60);
-    await this.userRepository.save(user);
+    user.passwordResetToken = uuidv4();
+    user.passwordResetExpires = this.generateExpiry(1); // 1 hour
+    await this.userRepo.save(user);
 
-    const frontend = this.config.get<string>("FRONTEND_URL");
-    const resetUrl = `${frontend}/auth/reset-password?token=${token}`;
-    console.log(resetUrl);
-
-    await this.mailerService.sendMail({
+    await this.mailer.sendMail({
       to: user.email,
-      subject: "Reset your password",
-      template: "forgot-password",
+      subject: 'Reset your password',
+      template: 'forgot-password',
       context: {
         name: user.displayName,
-        resetUrl,
+        resetUrl: `${this.config.get<string>('FRONTEND_URL')}/auth/reset-password?token=${user.passwordResetToken}`,
         expires: user.passwordResetExpires,
       },
     });
 
-    return { message: "Password reset email sent. Check your inbox." };
+    return { message: 'Password reset email sent. Check your inbox.' };
+  }
+
+  async validatePasswordResetToken(
+    token: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findByToken(
+      'passwordResetToken',
+      token,
+      'Invalid reset token',
+    );
+    const expires = user.passwordResetExpires;
+    if (!expires || expires < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+    return { message: 'Password Reset link is valid' };
   }
 
   async resetPassword(
     token: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({
-      where: { passwordResetToken: token },
-    });
-    if (
-      !user ||
-      !user.passwordResetExpires ||
-      user.passwordResetExpires < new Date()
-    ) {
-      throw new BadRequestException("Invalid or expired reset token");
+    const user = await this.findByToken(
+      'passwordResetToken',
+      token,
+      'Invalid or expired reset token',
+    );
+    const expires = user.passwordResetExpires;
+    if (!expires || expires < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     user.password = await bcrypt.hash(newPassword, 10);
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
-    await this.userRepository.save(user);
+    await this.userRepo.save(user);
 
-    return { message: "Password updated successfully." };
+    return { message: 'Password updated successfully.' };
   }
 
-  async validatePasswordResetToken(
-    token: string
-  ): Promise<{ message: string }> {
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  private signJwt(userId: string): string {
+    return this.jwtService.sign({ userId });
+  }
 
-    console.log(token);
-    
-    if (!token) {
-      throw new BadRequestException("Reset token is required");
-    }
+  private generateExpiry(hours: number): Date {
+    return new Date(Date.now() + hours * 3600 * 1000);
+  }
 
-    const user = await this.userRepository.findOne({
-      where: { passwordResetToken: token },
+  private async findByToken(
+    field: 'emailVerificationToken' | 'passwordResetToken',
+    token: string,
+    errorMsg: string,
+  ): Promise<User> {
+    if (!token) throw new BadRequestException(errorMsg);
+    const user = await this.userRepo.findOne({ where: { [field]: token } });
+    if (!user) throw new BadRequestException(errorMsg);
+    return user;
+  }
+
+  private async sendVerificationEmail(user: User) {
+    const url = `${this.config.get<string>('FRONTEND_URL')}/auth/verify?token=${user.emailVerificationToken}`;
+    await this.mailer.sendMail({
+      to: user.email,
+      subject: 'Confirm your email',
+      template: 'verify_email',
+      context: { name: user.displayName, verifyUrl: url, expires: user.emailTokenExpires },
     });
-    if (!user) {
-      throw new BadRequestException("Invalid reset token");
-    }
-    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
-      throw new BadRequestException("Reset token has expired");
-    }
-
-    return { message: "Password Reset link is valid" };
   }
 }
-

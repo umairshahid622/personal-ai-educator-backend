@@ -1,4 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from "@nestjs/common";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { Not, Repository } from "typeorm";
@@ -12,26 +16,19 @@ export class CategoriesService {
     private readonly categoryRepo: Repository<Categories>
   ) {}
 
-  async createCategory(dto: CreateCategoryDto) {
+  async createCategory(dto: CreateCategoryDto): Promise<Categories> {
+    const category = this.categoryRepo.create(dto);
     try {
-      let paylaod = this.categoryRepo.create({
-        name: dto.name,
-        imageUrl: dto.imageUrl,
-      });
-
-      return await this.categoryRepo.save(paylaod);
-    } catch (error) {}
-  }
-
-  async findAllCategories() {
-    try {
-      return await this.categoryRepo.find();
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      throw new Error("Failed to fetch categories");
+      return await this.categoryRepo.save(category);
+    } catch (error: any) {
+      if (error.code === "23505") {
+        throw new ConflictException(`Category '${dto.name}' already exists.`);
+      }
+      throw new InternalServerErrorException("Failed to create category");
     }
   }
 
-
- 
+  async findAllCategories(): Promise<Categories[]> {
+    return this.categoryRepo.find();
+  }
 }

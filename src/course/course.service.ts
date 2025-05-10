@@ -3,8 +3,8 @@ import { CreateCourseDto, PaginationDto } from "./dto/create-course.dto";
 import { UpdateCourseDto } from "./dto/update-course.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Courses } from "./entities/course.entity";
-import { Repository } from "typeorm";
-import { FindCoursesDto } from "./dto/find-course.dto";
+import { Brackets, Repository } from "typeorm";
+import { FindCoursesDto, PaginatedResult } from "./dto/find-course.dto";
 
 @Injectable()
 export class CourseService {
@@ -13,57 +13,49 @@ export class CourseService {
     private readonly courseRepo: Repository<Courses>
   ) {}
 
-  async paginate({ page = 1, limit = 10, categoryId }: PaginationDto) {
-    const skip = (page - 1) * limit;
-    const query = this.courseRepo
-      .createQueryBuilder("course")
-      .skip(skip)
-      .take(limit);
-
-    if (categoryId) {
-      query.where("course.categoryUuid = :categoryId", { categoryId });
-    }
-
-    const [data, total] = await query.getManyAndCount();
-
-    return {
-      data,
-      total,
-      page,
-      lastPage: Math.ceil(total / limit),
-    };
+  async paginate(dto: PaginationDto): Promise<PaginatedResult> {
+    return this.findCourses(dto, {});
   }
 
-  async findPaginated(dto: FindCoursesDto) {
+  async findPaginated(dto: FindCoursesDto): Promise<PaginatedResult> {
     const { page = 1, limit = 10, categoryUuid, search } = dto;
+    return this.findCourses({ page, limit }, { categoryUuid, search });
+  }
+
+  private async findCourses(
+    { page = 1, limit = 10 }: PaginationDto,
+    filters: { categoryUuid?: string; search?: string }
+  ): Promise<PaginatedResult> {
     const skip = (page - 1) * limit;
+    const qb = this.courseRepo.createQueryBuilder("c");
 
-    const qb = this.courseRepo
-      .createQueryBuilder("c")
-      .where("c.categoryUuid = :categoryUuid", { categoryUuid });
+    if (filters.categoryUuid) {
+      qb.andWhere("c.categoryUuid = :categoryUuid", {
+        categoryUuid: filters.categoryUuid,
+      });
+    }
 
-    if (search) {
+    if (filters.search) {
       qb.andWhere(
-        `(c.title       ILIKE :q
-         OR c.programType ILIKE :q
-         OR c.duration    ILIKE :q
-         OR c.rating    ILIKE :q
-         OR c.skills      ILIKE :q)`,
-        { q: `%${search}%` }
+        new Brackets((qb) => {
+          qb.where("c.title ILIKE :q", { q: `%${filters.search}%` })
+            .orWhere("c.programType ILIKE :q", { q: `%${filters.search}%` })
+            .orWhere("c.duration ILIKE :q", { q: `%${filters.search}%` })
+            .orWhere("c.rating ILIKE :q", { q: `%${filters.search}%` })
+            .orWhere("c.skills ILIKE :q", { q: `%${filters.search}%` })
+            .orWhere("c.site ILIKE :q", { q: `%${filters.search}%` });
+        })
       );
     }
 
-    const [data, total] = await qb
-      .take(limit)
-      .skip(skip)
-      .orderBy("c.title", "ASC")
-      .getManyAndCount();
+    qb.skip(skip).take(limit).orderBy("c.title", "ASC");
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       data,
+      total,
       page,
       lastPage: Math.ceil(total / limit),
-      total,
     };
   }
 }
