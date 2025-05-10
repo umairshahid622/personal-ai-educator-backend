@@ -273,7 +273,7 @@ export class QuizService {
           pdfPath,
           originalName: subCat.name,
         });
-        response.certificateMessage = `Certificate issued for sub-category “${subCat.name}”.`;
+        response.certificateMessage = `Certificate issued for subject “${subCat.name}”.`;
       }
 
       // degree cert
