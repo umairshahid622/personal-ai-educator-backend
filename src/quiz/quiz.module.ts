@@ -10,6 +10,7 @@ import { Certificate } from "src/certificates/entities/certificate.entity";
 import { Degree } from "src/degree/entities/degree.entity";
 import { User } from "src/users/entities/users.entity";
 import { Categories } from "src/categories/entities/category.entity";
+import { AuthenticationModule } from "src/authentication/authentication.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { Categories } from "src/categories/entities/category.entity";
       User,
       Categories,
     ]),
+    AuthenticationModule
   ],
   controllers: [QuizController],
   providers: [QuizService],

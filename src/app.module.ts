@@ -44,7 +44,7 @@ import { ScheduleModule } from "@nestjs/schedule";
       useFactory: (config: ConfigService) => ({
         type: "postgres",
         host: config.get<string>("DATABASE_HOST"),
-        port: config.get<number>("DATABASE_PORT", 5432), // Default port 5432
+        port: config.get<number>("DATABASE_PORT", 5432),
         username: config.get<string>("DATABASE_USERNAME"),
         password: config.get<string>("DATABASE_PASSWORD"),
         database: config.get<string>("DATABASE_NAME"),
