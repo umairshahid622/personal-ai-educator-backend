@@ -12,8 +12,6 @@ const quiz_service_1 = require("./quiz.service");
 const quiz_controller_1 = require("./quiz.controller");
 const typeorm_1 = require("@nestjs/typeorm");
 const quiz_entity_1 = require("./entities/quiz.entity");
-const jwt_1 = require("@nestjs/jwt");
-const config_1 = require("@nestjs/config");
 const subcategory_entity_1 = require("../subcategory/entities/subcategory.entity");
 const certificate_entity_1 = require("../certificates/entities/certificate.entity");
 const degree_entity_1 = require("../degree/entities/degree.entity");
@@ -33,15 +31,6 @@ exports.QuizModule = QuizModule = __decorate([
                 users_entity_1.User,
                 category_entity_1.Categories,
             ]),
-            jwt_1.JwtModule.registerAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (config) => ({
-                    global: true,
-                    secret: config.get("JWT_SECRET"),
-                    signOptions: { expiresIn: "5h" },
-                }),
-            }),
         ],
         controllers: [quiz_controller_1.QuizController],
         providers: [quiz_service_1.QuizService],

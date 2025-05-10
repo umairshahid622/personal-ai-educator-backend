@@ -21,16 +21,18 @@ let AuthenticationModule = class AuthenticationModule {
 };
 exports.AuthenticationModule = AuthenticationModule;
 exports.AuthenticationModule = AuthenticationModule = __decorate([
+    (0, common_1.Global)(),
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([users_entity_1.User]),
             jwt_1.JwtModule.registerAsync({
+                global: true,
                 imports: [config_1.ConfigModule],
                 inject: [config_1.ConfigService],
                 useFactory: (config) => ({
                     global: true,
                     secret: config.get("JWT_SECRET"),
-                    signOptions: { expiresIn: "5h" },
+                    signOptions: { expiresIn: config.get("JWT_TOKEN_EXPIRE_TTL_HOURS") },
                 }),
             }),
             mailer_1.MailerModule.forRootAsync({
@@ -58,6 +60,7 @@ exports.AuthenticationModule = AuthenticationModule = __decorate([
                 }),
             }),
         ],
+        exports: [jwt_1.JwtModule],
         controllers: [authentication_controller_1.AuthenticationController],
         providers: [authentication_service_1.AuthenticationService],
     })

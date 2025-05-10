@@ -190,7 +190,7 @@ let AuthenticationService = class AuthenticationService {
         if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
             throw new common_1.BadRequestException("Reset token has expired");
         }
-        return { message: "Token is valid" };
+        return { message: "Password Reset link is valid" };
     }
 };
 exports.AuthenticationService = AuthenticationService;

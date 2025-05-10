@@ -21,15 +21,6 @@ import { Categories } from "src/categories/entities/category.entity";
       User,
       Categories,
     ]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        global: true,
-        secret: config.get<string>("JWT_SECRET"),
-        signOptions: { expiresIn: "5h" },
-      }),
-    }),
   ],
   controllers: [QuizController],
   providers: [QuizService],

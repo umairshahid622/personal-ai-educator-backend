@@ -251,9 +251,7 @@ export class AuthenticationService {
       throw new BadRequestException("Reset token has expired");
     }
 
-    return { message: "Password Reset link valid" };
+    return { message: "Password Reset link is valid" };
   }
 }
 
-
-// http://localhost:3000/auth/reset-password?token=3c083634-2791-406b-accf-091b3f07bd50

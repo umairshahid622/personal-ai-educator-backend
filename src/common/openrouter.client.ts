@@ -20,7 +20,6 @@ export class OpenRouterClient {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.key}`,
       },
-      timeout: 30_000,
     });
   }
 

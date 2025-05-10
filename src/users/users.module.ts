@@ -9,15 +9,6 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        global: true,
-        secret: config.get<string>("JWT_SECRET"),
-        signOptions: { expiresIn: "5h" },
-      }),
-    }),
   ],
   controllers: [UsersController],
   providers: [UsersService],

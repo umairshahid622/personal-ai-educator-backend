@@ -12,8 +12,6 @@ const degree_service_1 = require("./degree.service");
 const degree_controller_1 = require("./degree.controller");
 const degree_entity_1 = require("./entities/degree.entity");
 const typeorm_1 = require("@nestjs/typeorm");
-const jwt_1 = require("@nestjs/jwt");
-const config_1 = require("@nestjs/config");
 let DegreeModule = class DegreeModule {
 };
 exports.DegreeModule = DegreeModule;
@@ -21,15 +19,6 @@ exports.DegreeModule = DegreeModule = __decorate([
     (0, common_1.Module)({
         imports: [
             typeorm_1.TypeOrmModule.forFeature([degree_entity_1.Degree]),
-            jwt_1.JwtModule.registerAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (config) => ({
-                    global: true,
-                    secret: config.get("JWT_SECRET"),
-                    signOptions: { expiresIn: "5h" },
-                }),
-            }),
         ],
         controllers: [degree_controller_1.DegreeController],
         providers: [degree_service_1.DegreeService],
