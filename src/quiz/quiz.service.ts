@@ -76,37 +76,35 @@ export class QuizService {
     return quiz;
   }
 
-  async generateExamByTitle(
-    userId: string,
-    subCategoryId: string,
-    title: string
-  ): Promise<Mcq[]> {
-    const prompt = `
-    You are an expert question-writer.  
-    Based on the topic: "${title}", generate exactly 10 multiple-choice questions.  
-    
-    ❶ Each question must be numbered Q1 through Q10.       
-    ❷ Immediately after each question’s four options, add a line that begins with “Correct Answer:”
-    ❸ Do NOT include any other text, explanation, or analysis—only the questions, options, and correct answers, in this exact format:
-    
-    Q1: [Your question here]  
-    option a  
-    option b  
-    option c  
-    option d  
-    
-    Correct Answer: [a|b|c|d]
-    
-    Q2: …  
-    …  
-    Q10: …  
-    
-    Make sure every “Correct Answer:” line matches the actual correct option above it.
-    `;
+  async generateLecture(title: string) {
+    console.log(`title::::::: ${title}`);
 
-    const aiResp = await this.ai.getCompletion(prompt);
+    const aiResp = await this.ai.generateLecture(title);
     const raw = aiResp.choices?.[0]?.message?.content ?? "";
-    return this.parseMcq(raw);
+    console.log(raw);
+    
+    return raw;
+  }
+
+  async generateExamByLecture(lecture: string) {
+    const apiResp = await this.ai.generateMcqs(lecture);
+
+    const raw =
+      typeof apiResp === "string"
+        ? apiResp
+        : (apiResp.choices?.[0]?.message?.content ?? "");
+
+    if (!raw) {
+      throw new Error("No MCQ content returned by AI");
+    }
+
+    console.log("RAW MCQ TEXT:\n", raw);
+
+    // 3. Now your parser will see the Q1/Q2 lines
+    const questions = this.parseMcq(raw);
+    console.log("PARSED MCQS:", questions);
+
+    return questions;
   }
 
   async updateStatusByTitle(
@@ -175,17 +173,11 @@ export class QuizService {
     const subCat = await this.subCatRepo.findOneOrFail({
       where: { id: subCategoryId },
     });
-    const prompt = `Generate exactly 7 quiz titles for the course ${subCat.name} in pure JSON format.
-  Only the first quiz should have status "unlocked", the rest "locked".
-  Return a JSON array like:
-  [
-    {"title":"…","status":"unlocked"},
-    …,
-    {"title":"…","status":"locked"}
-  ]
-  No explanation—just JSON.`;
 
-    const aiResp = await this.ai.getCompletion(prompt);
+    if (!subCat) {
+      if (!subCat) throw new NotFoundException("SubCategory not found");
+    }
+    const aiResp = await this.ai.generateQuizTitles(subCat.name);
     const items = this.parseJsonArray(
       aiResp.choices?.[0]?.message?.content || "[]"
     );
@@ -274,6 +266,77 @@ export class QuizService {
     return `Degree certificate issued for "${subCat.category.name}".`;
   }
 
+  private parseJsonArray(raw: string) {
+    const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
+    const jsonText = fence ? fence[1] : raw;
+    return JSON.parse(jsonText.trim());
+  }
+
+  // private parseMcq(raw: string): Mcq[] {
+  //   const lines = raw
+  //     .split(/\r?\n/)
+  //     .map((l) => l.trim())
+  //     .filter(Boolean);
+  //   const questions: Mcq[] = [];
+  //   let current: Partial<Mcq> = {};
+  //   for (const line of lines) {
+  //     if (/^Q\d+:/.test(line)) {
+  //       if (current.question) questions.push(current as Mcq);
+  //       current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
+  //     } else if (/^[abcd]\)/.test(line)) {
+  //       current.options!.push(line);
+  //     } else if (/^Correct Answer:/i.test(line)) {
+  //       current.answer = line.replace(/^Correct Answer:\s*/i, "");
+  //     }
+  //   }
+  //   if (current.question) questions.push(current as Mcq);
+
+  //   return questions;
+  // }
+  private parseMcq(raw: string): Mcq[] {
+    const lines = raw
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(Boolean);
+  
+    const questions: Mcq[] = [];
+    let current: Partial<Mcq> = {};
+  
+    for (const line of lines) {
+      // Q1: …
+      if (/^Q\d+:/.test(line)) {
+        if (current.question) {
+          questions.push(current as Mcq);
+        }
+        current = {
+          question: line.replace(/^Q\d+:\s*/, '').trim(),
+          options: [],
+        };
+      }
+      // option a) OR option a: OR a) OR a:
+      else if (/^(?:option\s*)?[a-d][\):]/i.test(line)) {
+        const m = line.match(/^(?:option\s*)?([a-d])[\):]\s*(.+)$/i);
+        if (m) {
+          const [, letter, text] = m;
+          current.options!.push(text.trim());
+        }
+      }
+      // Correct Answer:
+      else if (/^Correct Answer:/i.test(line)) {
+        current.answer = line
+          .replace(/^Correct Answer:\s*/i, '')
+          .trim()
+          .toLowerCase();
+      }
+    }
+  
+    if (current.question) {
+      questions.push(current as Mcq);
+    }
+  
+    return questions as Mcq[];
+  }
+  
   //================================================================================
 
   private async buildSubCategoryPdf(
@@ -592,33 +655,5 @@ export class QuizService {
     });
 
     return `/assets/degrees/${filename}`;
-  }
-
-  private parseJsonArray(raw: string) {
-    const fence = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(raw);
-    const jsonText = fence ? fence[1] : raw;
-    return JSON.parse(jsonText.trim());
-  }
-
-  private parseMcq(raw: string): Mcq[] {
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    const questions: Mcq[] = [];
-    let current: Partial<Mcq> = {};
-    for (const line of lines) {
-      if (/^Q\d+:/.test(line)) {
-        if (current.question) questions.push(current as Mcq);
-        current = { question: line.replace(/^Q\d+:\s*/, ""), options: [] };
-      } else if (/^[abcd]\)/.test(line)) {
-        current.options!.push(line);
-      } else if (/^Correct Answer:/i.test(line)) {
-        current.answer = line.replace(/^Correct Answer:\s*/i, "");
-      }
-    }
-    if (current.question) questions.push(current as Mcq);
-
-    return questions;
   }
 }

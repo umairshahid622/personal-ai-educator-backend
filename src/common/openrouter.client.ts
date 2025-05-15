@@ -14,8 +14,42 @@ export class OpenRouterClient {
     this.mcqKey = process.env.OPENROUTER_API_KEY_MCQS || "";
   }
 
-  async generateLecture(topic: string) {
-    const prompt = `You are an expert lecturer.\nProvide a comprehensive lecture on the topic: "${topic}".\nUse clear headings, concise explanations, and examples.\nNo conversational filler—just the lecture content.`;
+  async generateLecture(title: string) {
+    const prompt = `
+    You are a friendly tutor.  Give the Lecture about the below topic as a JSON array (minified):
+    
+    ${title}
+    
+    Produce a minified JSON array of sections, each having:
+      • "heading": string  
+      • "paragraph": string  
+      • optionally "example": string  
+      • optionally "list": [string,…]
+    
+    Output only valid minified JSON (no code fences, no markdown, no extra whitespace).
+
+    Example:
+    [
+      {
+        "heading": "Introduction",
+        "paragraph": "This is the introduction to the lecture."
+      },
+      {
+        "heading": "Body",
+        "paragraph": "This is the body of the lecture."
+      },
+      {
+        "heading": "Conclusion",
+        "paragraph": "This is the conclusion of the lecture."
+      },
+      {
+        "heading": "Example",
+        "example": "This is an example of the lecture."
+      },
+      {
+        "heading": "List",      
+    ]
+    `.trim();
     const client = this.createClient(this.lectureKey, "LECTURE");
     return this.doCompletion(client, prompt, "Lecture generation failed");
   }
@@ -34,9 +68,11 @@ export class OpenRouterClient {
     return this.doCompletion(client, prompt, "Quiz title generation failed");
   }
 
-  async generateMcqs(topic: string) {
+  async generateMcqs(lecture: any) {
+    const stringifiedLecture = JSON.stringify(lecture);
+
     const prompt = `You are an expert question-writer.
-Based on the subject or topic: "${topic}", generate exactly 10 multiple-choice questions that fully cover the key concepts.
+Based on the lecture: "${stringifiedLecture}", generate exactly 10 multiple-choice questions that fully cover the key concepts.
 ❶ Number questions Q1 through Q10.
 ❷ After each question’s four options, add a line “Correct Answer:” indicating the correct choice.
 ❸ Include no additional text—only the questions, options, and answer lines in this format:
@@ -48,8 +84,37 @@ option c
 option d
 
 Correct Answer: [a|b|c|d]
+Example:
+Q1: [Question]
+option a
+option b
+option c
+option d
+Correct Answer: [a|b|c|d]
 
-… through Q10.
+Q2: [Question]
+option a
+option b
+option c
+option d
+Correct Answer: [a|b|c|d]
+
+...
+
+Q9: [Question]
+option a
+option b
+option c
+option d
+Correct Answer: [a|b|c|d]
+
+Q10: [Question]
+option a
+option b
+option c
+option d
+Correct Answer: [a|b|c|d]
+
 Ensure each 'Correct Answer:' matches the correct option above it.`;
     const client = this.createClient(this.mcqKey, "MCQ");
     return this.doCompletion(client, prompt, "MCQ generation failed");

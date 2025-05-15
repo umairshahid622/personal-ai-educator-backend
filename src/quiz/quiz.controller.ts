@@ -32,18 +32,24 @@ export class QuizController {
     const userId = req["user"]["userId"];
     return this.quizService.getOrCreateForUser(userId, subId);
   }
-  @Get("exam")
-  async generateExamByTitle(
-    @Query("title") title: string,
-    @Query("subCategoryId") subCategoryId: string,
-    @Req() req: Request
-  ) {
+  
+  @Get("lecture/:title")
+  async generateExamByTitle(@Param("title") encodedTitle: string) {
+    const title = decodeURIComponent(encodedTitle);
     if (!title) {
       throw new NotFoundException("quiz title is required");
     }
-    const userId: string = req["user"]["userId"];
 
-    return this.quizService.generateExamByTitle(userId, subCategoryId, title);
+    return this.quizService.generateLecture(title);
+  }
+
+  @Post("generateMcqs")
+  async generateExamByLecture(@Body() lecture: string) {
+    if (!lecture) {
+      throw new NotFoundException("lecture is required");
+    }
+
+    return this.quizService.generateExamByLecture(lecture);
   }
 
   @Patch("item-status")
